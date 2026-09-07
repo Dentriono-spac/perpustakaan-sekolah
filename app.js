@@ -198,10 +198,10 @@ function mulaiScanSiswa() {
 
 
 /*************************************************
- * CARI SISWA API
+ * CARI SISWA - JSONP
  *************************************************/
 
-async function cariSiswaAPI(idSiswa) {
+function cariSiswaAPI(idSiswa) {
 
   const area =
     document.getElementById("dataSiswa");
@@ -211,90 +211,153 @@ async function cariSiswaAPI(idSiswa) {
     "Mencari data siswa...";
 
 
-  try {
-
-    const url =
-      API_URL +
-      "?action=cari_siswa&idSiswa=" +
-      encodeURIComponent(idSiswa);
+  const callbackName =
+    "__cariSiswa_" + Date.now();
 
 
-    const response =
-      await fetch(url);
+  const script =
+    document.createElement("script");
 
 
-    const data =
-      await response.json();
+  script.src =
+    API_URL +
+    "?action=cari_siswa" +
+    "&idSiswa=" +
+    encodeURIComponent(idSiswa) +
+    "&callback=" +
+    encodeURIComponent(callbackName);
 
 
-    if (data.found) {
+  window[callbackName] =
+    function(data) {
 
-      siswaAktif = data;
+      // Hapus callback
+      try {
+        delete window[callbackName];
+      } catch (e) {
+        window[callbackName] = undefined;
+      }
 
 
-      area.innerHTML = `
+      // Hapus script
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
 
-        <div class="hasil-card">
 
-          <b>✓ DATA SISWA</b>
+      console.log(
+        "Hasil scan siswa:",
+        data
+      );
 
-          <br><br>
 
-          Nama:
-          ${data.nama_siswa}
+      if (!data) {
 
-          <br>
+        siswaAktif = null;
 
-          Kelas:
-          ${data.kelas}
+        area.innerHTML = `
+          <div class="error">
+            Data siswa tidak ditemukan.
+          </div>
+        `;
 
-          <br>
+        return;
 
-          ID:
-          ${data.id_siswa}
+      }
 
-        </div>
 
-      `;
+      if (data.found) {
 
-    }
+        siswaAktif = data;
 
-    else {
+
+        area.innerHTML = `
+
+          <div class="hasil-card">
+
+            <b>✓ DATA SISWA</b>
+
+            <br><br>
+
+            Nama:
+            ${data.nama_siswa}
+
+            <br>
+
+            Kelas:
+            ${data.kelas}
+
+            <br>
+
+            ID:
+            ${data.id_siswa}
+
+          </div>
+
+        `;
+
+      }
+
+      else {
+
+        siswaAktif = null;
+
+
+        area.innerHTML = `
+
+          <div class="error">
+
+            ${data.message || "Siswa tidak ditemukan"}
+
+          </div>
+
+        `;
+
+      }
+
+    };
+
+
+  script.onerror =
+    function() {
+
+      try {
+        delete window[callbackName];
+      } catch (e) {
+        window[callbackName] = undefined;
+      }
+
+
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+
 
       siswaAktif = null;
+
 
       area.innerHTML = `
 
         <div class="error">
 
-          ${data.message}
+          ❌ Gagal terhubung ke server
+
+          <br>
+
+          <small>
+            Google Apps Script tidak dapat diakses.
+          </small>
 
         </div>
 
       `;
 
-    }
+    };
 
-  }
 
-  catch(error) {
-
-    console.error(error);
-
-    area.innerHTML = `
-
-      <div class="error">
-
-        Gagal terhubung ke server
-
-      </div>
-
-    `;
-
-  }
+  document.body.appendChild(script);
 
 }
-
 
 /*************************************************
  * SCAN BUKU
@@ -353,10 +416,10 @@ function mulaiScanBuku() {
 
 
 /*************************************************
- * CARI BUKU API
+ * CARI BUKU - JSONP
  *************************************************/
 
-async function cariBukuAPI(idBuku) {
+function cariBukuAPI(idBuku) {
 
   const area =
     document.getElementById("dataBuku");
@@ -366,90 +429,155 @@ async function cariBukuAPI(idBuku) {
     "Mencari data buku...";
 
 
-  try {
-
-    const url =
-      API_URL +
-      "?action=cari_buku&idBuku=" +
-      encodeURIComponent(idBuku);
+  const callbackName =
+    "__cariBuku_" + Date.now();
 
 
-    const response =
-      await fetch(url);
+  const script =
+    document.createElement("script");
 
 
-    const data =
-      await response.json();
+  script.src =
+    API_URL +
+    "?action=cari_buku" +
+    "&idBuku=" +
+    encodeURIComponent(idBuku) +
+    "&callback=" +
+    encodeURIComponent(callbackName);
 
 
-    if (data.found) {
+  window[callbackName] =
+    function(data) {
 
-      bukuAktif = data;
+      try {
+        delete window[callbackName];
+      } catch (e) {
+        window[callbackName] = undefined;
+      }
 
 
-      area.innerHTML = `
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
 
-        <div class="hasil-card">
 
-          <b>✓ DATA BUKU</b>
+      console.log(
+        "Hasil scan buku:",
+        data
+      );
 
-          <br><br>
 
-          Judul:
-          ${data.judul_buku}
+      if (!data) {
 
-          <br>
+        bukuAktif = null;
 
-          Penulis:
-          ${data.penulis}
+        area.innerHTML = `
 
-          <br>
+          <div class="error">
 
-          Stok:
-          ${data.stok}
+            Data buku tidak ditemukan.
 
-        </div>
+          </div>
 
-      `;
+        `;
 
-    }
+        return;
 
-    else {
+      }
+
+
+      if (data.found) {
+
+        bukuAktif = data;
+
+
+        area.innerHTML = `
+
+          <div class="hasil-card">
+
+            <b>✓ DATA BUKU</b>
+
+            <br><br>
+
+            Judul:
+            ${data.judul_buku}
+
+            <br>
+
+            Penulis:
+            ${data.penulis}
+
+            <br>
+
+            Stok:
+            ${data.stok}
+
+          </div>
+
+        `;
+
+      }
+
+      else {
+
+        bukuAktif = null;
+
+
+        area.innerHTML = `
+
+          <div class="error">
+
+            ${data.message || "Buku tidak ditemukan"}
+
+          </div>
+
+        `;
+
+      }
+
+    };
+
+
+  script.onerror =
+    function() {
+
+      try {
+        delete window[callbackName];
+      } catch (e) {
+        window[callbackName] = undefined;
+      }
+
+
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+
 
       bukuAktif = null;
+
 
       area.innerHTML = `
 
         <div class="error">
 
-          ${data.message}
+          ❌ Gagal terhubung ke server
+
+          <br>
+
+          <small>
+            Google Apps Script tidak dapat diakses.
+          </small>
 
         </div>
 
       `;
 
-    }
+    };
 
-  }
 
-  catch(error) {
-
-    console.error(error);
-
-    area.innerHTML = `
-
-      <div class="error">
-
-        Gagal terhubung ke server
-
-      </div>
-
-    `;
-
-  }
+  document.body.appendChild(script);
 
 }
-
 
 /*************************************************
  * PROSES PINJAM
