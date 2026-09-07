@@ -71,9 +71,10 @@ header p {
   padding: 20px;
   border: none;
   border-radius: 10px;
-  background: white;
-  color: #1e293b;
+  background: white !important;
+  color: #1e293b !important;
   font-size: 18px;
+  font-weight: bold;
   cursor: pointer;
   box-shadow: 0 3px 8px rgba(0,0,0,0.1);
 }
@@ -232,4 +233,11 @@ input {
 
   font-weight: bold;
 
+}
+
+/* FIX WARNA TULISAN MENU UTAMA */
+#menuUtama button {
+  color: #1e293b !important;
+  background-color: #ffffff !important;
+  -webkit-text-fill-color: #1e293b !important;
 }
