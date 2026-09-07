@@ -1054,11 +1054,7 @@ async function loadKeterlambatan() {
  * STATISTIK PERPUSTAKAAN
  *************************************************/
 
-/*************************************************
- * STATISTIK PERPUSTAKAAN
- *************************************************/
-
-async function loadStatistik() {
+function loadStatistik() {
 
   const area = document.getElementById("statistik");
 
@@ -1069,51 +1065,55 @@ async function loadStatistik() {
 
   area.innerHTML = "Memuat statistik...";
 
-  try {
+  const callbackName =
+    "__statistikCallback_" + Date.now();
 
-    const url =
-      API_URL +
-      "?action=statistik";
+  const script = document.createElement("script");
 
-    console.log("Memanggil statistik:", url);
+  script.src =
+    API_URL +
+    "?action=statistik&callback=" +
+    encodeURIComponent(callbackName);
 
-    const response =
-      await fetch(url, {
-        method: "GET",
-        cache: "no-store"
-      });
+  let selesai = false;
 
-    console.log(
-      "Status API statistik:",
-      response.status
-    );
+  window[callbackName] = function(data) {
 
-    if (!response.ok) {
-      throw new Error(
-        "HTTP Error " +
-        response.status
-      );
+    selesai = true;
+
+    if (script.parentNode) {
+      script.parentNode.removeChild(script);
     }
 
-    const data =
-      await response.json();
-
-    console.log(
-      "Data statistik:",
-      data
-    );
-
-    if (!data) {
-      throw new Error(
-        "API tidak mengembalikan data"
-      );
+    try {
+      delete window[callbackName];
+    } catch (e) {
+      window[callbackName] = undefined;
     }
 
-    if (data.success === false) {
-      throw new Error(
-        data.message ||
-        "API statistik gagal"
-      );
+    if (!data || data.success === false) {
+
+      area.innerHTML = `
+        <div class="statistik-title">
+          📊 STATUS PERPUSTAKAAN
+        </div>
+
+        <div style="
+          padding:15px;
+          color:#dc2626;
+          text-align:center;
+        ">
+          ❌ Gagal memuat statistik
+          <br>
+          <small>
+            ${data && data.message
+              ? data.message
+              : "Data statistik tidak tersedia"}
+          </small>
+        </div>
+      `;
+
+      return;
     }
 
     area.innerHTML = `
@@ -1144,7 +1144,6 @@ async function loadStatistik() {
 
         </div>
 
-
         <div class="statistik-card">
 
           <div class="statistik-icon">
@@ -1164,7 +1163,6 @@ async function loadStatistik() {
           </div>
 
         </div>
-
 
         <div class="statistik-card">
 
@@ -1188,18 +1186,25 @@ async function loadStatistik() {
 
       </div>
     `;
+  };
 
-  }
+  script.onerror = function() {
 
-  catch (error) {
+    if (selesai) {
+      return;
+    }
 
-    console.error(
-      "ERROR STATISTIK:",
-      error
-    );
+    if (script.parentNode) {
+      script.parentNode.removeChild(script);
+    }
+
+    try {
+      delete window[callbackName];
+    } catch (e) {
+      window[callbackName] = undefined;
+    }
 
     area.innerHTML = `
-
       <div class="statistik-title">
         📊 STATUS PERPUSTAKAAN
       </div>
@@ -1209,27 +1214,28 @@ async function loadStatistik() {
         color:#dc2626;
         text-align:center;
       ">
-
         ❌ Gagal memuat statistik
-
         <br>
-
         <small>
-          ${error.message}
+          API Google Apps Script tidak dapat diakses
         </small>
-
       </div>
-
     `;
+  };
 
-  }
-
+  document.body.appendChild(script);
 }
+
 
 /*************************************************
  * LOAD STATISTIK SAAT HALAMAN DIBUKA
  *************************************************/
 
-document.addEventListener("DOMContentLoaded", function () {
-  loadStatistik();
-});
+document.addEventListener(
+  "DOMContentLoaded",
+  function() {
+
+    loadStatistik();
+
+  }
+);
