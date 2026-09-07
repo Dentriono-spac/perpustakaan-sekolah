@@ -3,7 +3,7 @@
  *************************************************/
 
 const API_URL =
-  "PASTE_URL_WEB_APP_APPS_SCRIPT_DISINI";
+  "https://script.google.com/macros/s/AKfycbyk367Q4T6gyUN2Xptxi9PPYaOfNXjvTSaWqHRxH2uqNNgEynfRgpBAeHg8HFnyr8UOHw/exec";
 
 
 /*************************************************
