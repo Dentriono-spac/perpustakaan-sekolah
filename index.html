@@ -30,7 +30,9 @@
 
     <h1>📚 PERPUSTAKAAN</h1>
 
-    <p>Sistem Perpustakaan Digital Sekolah</p>
+    <p>
+      Sistem Perpustakaan Digital Sekolah
+    </p>
 
   </header>
 
@@ -38,55 +40,92 @@
 
   <!-- MENU UTAMA -->
 
-  <section id="menuUtama" class="menu">
+  <section
+    id="menuUtama"
+    class="menu"
+  >
 
     <button onclick="bukaMenu('pinjam')">
-      📚 <span>Pinjam Buku</span>
+
+      📚
+      <span>Pinjam Buku</span>
+
     </button>
+
 
     <button onclick="bukaMenu('kembali')">
-      ↩️ <span>Kembalikan Buku</span>
+
+      ↩️
+      <span>Kembalikan Buku</span>
+
     </button>
+
 
     <button onclick="bukaMenu('pinjaman')">
-      📖 <span>Buku Dipinjam</span>
+
+      📖
+      <span>Buku Dipinjam</span>
+
     </button>
 
+
     <button onclick="bukaMenu('terlambat')">
-      ⚠️ <span>Keterlambatan</span>
+
+      ⚠️
+      <span>Keterlambatan</span>
+
     </button>
 
   </section>
+
 
 
   <!-- STATISTIK -->
 
-  <section id="statistik" class="statistik">
+  <section
+    id="statistik"
+    class="statistik"
+  >
+
     Memuat statistik...
+
   </section>
+
 
 
   <!-- HALAMAN PINJAM -->
 
-  <section id="pinjam"
-           class="halaman hidden">
+  <section
+    id="pinjam"
+    class="halaman hidden"
+  >
 
-    <button class="btn-kembali"
-            onclick="kembaliMenu()">
+    <button
+      class="btn-kembali"
+      onclick="kembaliMenu()"
+    >
 
       ← Kembali
 
     </button>
 
 
-    <h2>📚 PINJAM BUKU</h2>
+    <h2>
+      📚 PINJAM BUKU
+    </h2>
+
 
 
     <div class="card">
 
-      <h3>1. Scan QR Siswa</h3>
+      <h3>
+        1. Scan QR Siswa
+      </h3>
 
-      <button onclick="mulaiScanSiswa()">
+
+      <button
+        onclick="mulaiScanSiswa()"
+      >
 
         📷 Scan QR Siswa
 
@@ -96,8 +135,10 @@
       <div id="readerSiswa"></div>
 
 
-      <div id="dataSiswa"
-           class="data-box">
+      <div
+        id="dataSiswa"
+        class="data-box"
+      >
 
         Belum ada siswa
 
@@ -109,9 +150,14 @@
 
     <div class="card">
 
-      <h3>2. Scan QR Buku</h3>
+      <h3>
+        2. Scan QR Buku
+      </h3>
 
-      <button onclick="mulaiScanBuku()">
+
+      <button
+        onclick="mulaiScanBuku()"
+      >
 
         📷 Scan QR Buku
 
@@ -121,8 +167,10 @@
       <div id="readerBuku"></div>
 
 
-      <div id="dataBuku"
-           class="data-box">
+      <div
+        id="dataBuku"
+        class="data-box"
+      >
 
         Belum ada buku
 
@@ -132,9 +180,11 @@
 
 
 
-    <button id="btnPinjam"
-            class="btn-success"
-            onclick="prosesPinjam()">
+    <button
+      id="btnPinjam"
+      class="btn-success"
+      onclick="prosesPinjam()"
+    >
 
       PINJAM BUKU
 
@@ -143,33 +193,43 @@
 
     <div id="hasilPinjam"></div>
 
-
   </section>
 
 
 
   <!-- HALAMAN KEMBALIKAN -->
 
-  <section id="kembali"
-           class="halaman hidden">
+  <section
+    id="kembali"
+    class="halaman hidden"
+  >
 
-    <button class="btn-kembali"
-            onclick="kembaliMenu()">
+    <button
+      class="btn-kembali"
+      onclick="kembaliMenu()"
+    >
 
       ← Kembali
 
     </button>
 
 
-    <h2>↩️ KEMBALIKAN BUKU</h2>
+    <h2>
+      ↩️ KEMBALIKAN BUKU
+    </h2>
+
 
 
     <div class="card">
 
-      <h3>Scan QR Siswa</h3>
+      <h3>
+        Scan QR Siswa
+      </h3>
 
 
-      <button onclick="mulaiScanPengembalian()">
+      <button
+        onclick="mulaiScanPengembalian()"
+      >
 
         📷 Scan QR Siswa
 
@@ -187,60 +247,80 @@
 
     </div>
 
-
   </section>
 
 
 
-  <!-- HALAMAN PINJAMAN -->
+  <!-- HALAMAN BUKU DIPINJAM -->
 
-  <section id="pinjaman"
-           class="halaman hidden">
+  <section
+    id="pinjaman"
+    class="halaman hidden"
+  >
 
-    <button class="btn-kembali"
-            onclick="kembaliMenu()">
+    <button
+      class="btn-kembali"
+      onclick="kembaliMenu()"
+    >
 
       ← Kembali
 
     </button>
 
 
-    <h2>📖 BUKU YANG DIPINJAM</h2>
+    <h2>
+      📖 BUKU YANG DIPINJAM
+    </h2>
+
 
 
     <div class="card">
 
-      <h3>Scan QR Siswa</h3>
+      <h3>
+        Scan QR Siswa
+      </h3>
 
 
-      <button onclick="mulaiScanPinjaman()">
+      <button
+        onclick="mulaiScanPinjaman()"
+      >
 
         📷 Scan QR Siswa
 
       </button>
 
 
-      <div id="readerPinjaman"
-           style="width:100%;margin-top:15px;">
-      </div>
+      <div
+        id="readerPinjaman"
+        style="
+          width:100%;
+          margin-top:15px;
+        "
+      ></div>
 
 
-      <div style="
-        margin-top:10px;
-        text-align:center;
-        color:#666;
-      ">
+      <div
+        style="
+          margin-top:10px;
+          text-align:center;
+          color:#666;
+        "
+      >
 
-        Scan QR siswa untuk melihat buku yang sedang dipinjam.
+        Scan QR siswa untuk melihat
+        buku yang sedang dipinjam.
 
       </div>
 
     </div>
 
 
+
     <div class="card">
 
-      <h3>Atau Masukkan ID Siswa</h3>
+      <h3>
+        Atau Masukkan ID Siswa
+      </h3>
 
 
       <input
@@ -250,7 +330,9 @@
       >
 
 
-      <button onclick="cariPinjamanManual()">
+      <button
+        onclick="cariPinjamanManual()"
+      >
 
         Cari
 
@@ -261,28 +343,35 @@
 
     <div id="hasilPinjaman"></div>
 
-
   </section>
 
 
 
   <!-- HALAMAN TERLAMBAT -->
 
-  <section id="terlambat"
-           class="halaman hidden">
+  <section
+    id="terlambat"
+    class="halaman hidden"
+  >
 
-    <button class="btn-kembali"
-            onclick="kembaliMenu()">
+    <button
+      class="btn-kembali"
+      onclick="kembaliMenu()"
+    >
 
       ← Kembali
 
     </button>
 
 
-    <h2>⚠️ DAFTAR KETERLAMBATAN</h2>
+    <h2>
+      ⚠️ DAFTAR KETERLAMBATAN
+    </h2>
 
 
-    <button onclick="loadKeterlambatan()">
+    <button
+      onclick="loadKeterlambatan()"
+    >
 
       Refresh Data
 
@@ -291,14 +380,16 @@
 
     <div id="hasilTerlambat"></div>
 
-
   </section>
 
 
 </div>
 
 
-<script src="app.js?v=4"></script>
+
+<!-- APP JAVASCRIPT -->
+
+<script src="app.js?v=999"></script>
 
 
 </body>
