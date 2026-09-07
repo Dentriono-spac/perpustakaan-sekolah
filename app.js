@@ -11,10 +11,137 @@ const API_URL =
  *************************************************/
 
 let siswaAktif = null;
-
 let bukuAktif = null;
-
 let scannerAktif = null;
+
+
+/*************************************************
+ * JSONP HELPER
+ *************************************************/
+
+function panggilJSONP(action, parameter, callbackSelesai) {
+
+  const callbackName =
+    "__apiCallback_" +
+    Date.now() +
+    "_" +
+    Math.floor(Math.random() * 100000);
+
+  const script =
+    document.createElement("script");
+
+  let selesai = false;
+
+  let query =
+    "?action=" +
+    encodeURIComponent(action) +
+    "&callback=" +
+    encodeURIComponent(callbackName);
+
+  if (parameter) {
+
+    Object.keys(parameter).forEach(function(key) {
+
+      query +=
+        "&" +
+        encodeURIComponent(key) +
+        "=" +
+        encodeURIComponent(
+          parameter[key] == null
+            ? ""
+            : parameter[key]
+        );
+
+    });
+
+  }
+
+  function bersihkan() {
+
+    try {
+      delete window[callbackName];
+    } catch (e) {
+      window[callbackName] = undefined;
+    }
+
+    if (script.parentNode) {
+      script.parentNode.removeChild(script);
+    }
+
+  }
+
+  window[callbackName] =
+    function(data) {
+
+      if (selesai) {
+        return;
+      }
+
+      selesai = true;
+
+      bersihkan();
+
+      callbackSelesai(null, data);
+
+    };
+
+
+  script.onerror =
+    function() {
+
+      if (selesai) {
+        return;
+      }
+
+      selesai = true;
+
+      bersihkan();
+
+      callbackSelesai(
+        new Error(
+          "Google Apps Script tidak dapat diakses."
+        ),
+        null
+      );
+
+    };
+
+
+  script.src =
+    API_URL + query;
+
+  script.async = true;
+
+  document.body.appendChild(script);
+
+
+  /*
+   * Timeout 15 detik.
+   * Kalau server tidak membalas,
+   * tampilkan error dengan jelas.
+   */
+
+  setTimeout(function() {
+
+    if (selesai) {
+      return;
+    }
+
+    selesai = true;
+
+    bersihkan();
+
+    callbackSelesai(
+      new Error(
+        "Server tidak merespons dalam 15 detik."
+      ),
+      null
+    );
+
+  }, 15000);
+
+}
+
 
 /*************************************************
  * PINDAH MENU
@@ -22,7 +149,6 @@ let scannerAktif = null;
 
 function bukaMenu(namaMenu) {
 
-  // Sembunyikan menu utama
   const menuUtama =
     document.getElementById("menuUtama");
 
@@ -31,7 +157,6 @@ function bukaMenu(namaMenu) {
   }
 
 
-  // Sembunyikan STATUS PERPUSTAKAAN
   const statistik =
     document.getElementById("statistik");
 
@@ -40,7 +165,6 @@ function bukaMenu(namaMenu) {
   }
 
 
-  // Sembunyikan semua halaman
   const halaman =
     document.querySelectorAll(".halaman");
 
@@ -49,7 +173,6 @@ function bukaMenu(namaMenu) {
   });
 
 
-  // Tampilkan halaman yang dipilih
   const halamanAktif =
     document.getElementById(namaMenu);
 
@@ -58,13 +181,12 @@ function bukaMenu(namaMenu) {
   }
 
 
-  // Jika membuka keterlambatan,
-  // langsung ambil datanya
   if (namaMenu === "terlambat") {
     loadKeterlambatan();
   }
 
 }
+
 
 /*************************************************
  * KEMBALI KE MENU UTAMA
@@ -72,11 +194,9 @@ function bukaMenu(namaMenu) {
 
 function kembaliMenu() {
 
-  // Matikan scanner jika sedang aktif
   stopScanner();
 
 
-  // Sembunyikan semua halaman
   const halaman =
     document.querySelectorAll(".halaman");
 
@@ -85,7 +205,6 @@ function kembaliMenu() {
   });
 
 
-  // Tampilkan menu utama
   const menuUtama =
     document.getElementById("menuUtama");
 
@@ -94,7 +213,6 @@ function kembaliMenu() {
   }
 
 
-  // Tampilkan kembali STATUS PERPUSTAKAAN
   const statistik =
     document.getElementById("statistik");
 
@@ -103,7 +221,6 @@ function kembaliMenu() {
   }
 
 
-  // Perbarui statistik
   loadStatistik();
 
 }
@@ -115,22 +232,41 @@ function kembaliMenu() {
 
 function stopScanner() {
 
-  if (scannerAktif) {
+  if (!scannerAktif) {
+    return;
+  }
 
-    scannerAktif
-      .stop()
+  const scanner =
+    scannerAktif;
+
+  scannerAktif = null;
+
+
+  try {
+
+    scanner.stop()
       .then(function() {
 
-        scannerAktif = null;
+        console.log("Scanner dihentikan.");
 
       })
       .catch(function(error) {
 
-        console.log(error);
-
-        scannerAktif = null;
+        console.log(
+          "Scanner sudah berhenti:",
+          error
+        );
 
       });
+
+  }
+
+  catch(error) {
+
+    console.log(
+      "Gagal menghentikan scanner:",
+      error
+    );
 
   }
 
@@ -147,9 +283,7 @@ function mulaiScanSiswa() {
 
 
   const reader =
-    document.getElementById(
-      "readerSiswa"
-    );
+    document.getElementById("readerSiswa");
 
 
   if (!reader) {
@@ -166,13 +300,24 @@ function mulaiScanSiswa() {
   reader.innerHTML = "";
 
 
-  scannerAktif =
-    new Html5Qrcode(
-      "readerSiswa"
+  if (typeof Html5Qrcode === "undefined") {
+
+    alert(
+      "Library scanner belum dimuat."
     );
 
+    return;
 
-  scannerAktif.start(
+  }
+
+
+  const scanner =
+    new Html5Qrcode("readerSiswa");
+
+  scannerAktif = scanner;
+
+
+  scanner.start(
 
     {
       facingMode: "environment"
@@ -190,25 +335,32 @@ function mulaiScanSiswa() {
 
     function(decodedText) {
 
+      const idSiswa =
+        String(decodedText || "").trim();
+
+
       console.log(
         "QR SISWA TERBACA:",
-        decodedText
+        idSiswa
       );
+
+
+      if (!idSiswa) {
+        return;
+      }
 
 
       stopScanner();
 
 
-      cariSiswaAPI(
-        decodedText.trim()
-      );
+      cariSiswaAPI(idSiswa);
 
     },
 
 
     function(errorMessage) {
 
-      // Tidak perlu ditampilkan
+      // Abaikan error scan sementara
 
     }
 
@@ -220,6 +372,9 @@ function mulaiScanSiswa() {
       "ERROR KAMERA SISWA:",
       error
     );
+
+
+    scannerAktif = null;
 
 
     alert(
@@ -234,7 +389,7 @@ function mulaiScanSiswa() {
 
 /*************************************************
  * CARI SISWA
- * MENGGUNAKAN JSONP
+ * JSONP
  *************************************************/
 
 function cariSiswaAPI(idSiswa) {
@@ -243,75 +398,79 @@ function cariSiswaAPI(idSiswa) {
     document.getElementById("dataSiswa");
 
 
+  if (!area) {
+    return;
+  }
+
+
+  idSiswa =
+    String(idSiswa || "").trim();
+
+
+  if (!idSiswa) {
+
+    area.innerHTML = `
+      <div class="error">
+        ID siswa kosong.
+      </div>
+    `;
+
+    return;
+
+  }
+
+
   area.innerHTML =
-    "Mencari data siswa...";
+    "🔍 Mencari data siswa...";
 
 
-  const callbackName =
-    "__cariSiswa_" +
-    Date.now();
+  siswaAktif = null;
 
 
-  const script =
-    document.createElement("script");
+  panggilJSONP(
 
+    "cari_siswa",
 
-  script.src =
-    API_URL +
-    "?action=cari_siswa" +
-    "&idSiswa=" +
-    encodeURIComponent(idSiswa) +
-    "&callback=" +
-    callbackName;
+    {
+      idSiswa: idSiswa
+    },
 
-
-  window[callbackName] =
-    function(data) {
+    function(error, data) {
 
       console.log(
         "HASIL CARI SISWA:",
+        error,
         data
       );
 
 
-      // Hapus callback
-      try {
+      if (error) {
 
-        delete window[
-          callbackName
-        ];
+        area.innerHTML = `
+          <div class="error">
 
-      } catch (e) {
+            ❌ Gagal terhubung ke server.
 
-        window[
-          callbackName
-        ] = undefined;
+            <br><br>
 
-      }
+            <small>
+              ${error.message}
+            </small>
 
+          </div>
+        `;
 
-      // Hapus script
-      if (script.parentNode) {
-
-        script.parentNode
-          .removeChild(script);
+        return;
 
       }
 
 
       if (!data) {
 
-        siswaAktif = null;
-
-
         area.innerHTML = `
-
           <div class="error">
-
-            Data siswa kosong.
-
+            ❌ Data siswa kosong.
           </div>
-
         `;
 
         return;
@@ -333,17 +492,17 @@ function cariSiswaAPI(idSiswa) {
             <br><br>
 
             <b>Nama:</b>
-            ${data.nama_siswa}
+            ${data.nama_siswa || "-"}
 
             <br>
 
             <b>Kelas:</b>
-            ${data.kelas}
+            ${data.kelas || "-"}
 
             <br>
 
             <b>ID:</b>
-            ${data.id_siswa}
+            ${data.id_siswa || idSiswa}
 
           </div>
 
@@ -360,7 +519,10 @@ function cariSiswaAPI(idSiswa) {
 
           <div class="error">
 
-            ❌ ${data.message || "Data siswa tidak ditemukan"}
+            ❌ ${
+              data.message ||
+              "Data siswa tidak ditemukan"
+            }
 
           </div>
 
@@ -368,68 +530,12 @@ function cariSiswaAPI(idSiswa) {
 
       }
 
-    };
+    }
 
-
-  script.onerror =
-    function() {
-
-      console.error(
-        "JSONP CARI SISWA GAGAL"
-      );
-
-
-      try {
-
-        delete window[
-          callbackName
-        ];
-
-      } catch (e) {
-
-        window[
-          callbackName
-        ] = undefined;
-
-      }
-
-
-      if (script.parentNode) {
-
-        script.parentNode
-          .removeChild(script);
-
-      }
-
-
-      siswaAktif = null;
-
-
-      area.innerHTML = `
-
-        <div class="error">
-
-          ❌ Google Apps Script tidak dapat diakses.
-
-          <br><br>
-
-          <small>
-            Pastikan Web App sudah di-deploy
-            sebagai "Anyone".
-          </small>
-
-        </div>
-
-      `;
-
-    };
-
-
-  document.body.appendChild(
-    script
   );
 
 }
+
 
 /*************************************************
  * SCAN BUKU
@@ -441,9 +547,7 @@ function mulaiScanBuku() {
 
 
   const reader =
-    document.getElementById(
-      "readerBuku"
-    );
+    document.getElementById("readerBuku");
 
 
   if (!reader) {
@@ -460,13 +564,24 @@ function mulaiScanBuku() {
   reader.innerHTML = "";
 
 
-  scannerAktif =
-    new Html5Qrcode(
-      "readerBuku"
+  if (typeof Html5Qrcode === "undefined") {
+
+    alert(
+      "Library scanner belum dimuat."
     );
 
+    return;
 
-  scannerAktif.start(
+  }
+
+
+  const scanner =
+    new Html5Qrcode("readerBuku");
+
+  scannerAktif = scanner;
+
+
+  scanner.start(
 
     {
       facingMode: "environment"
@@ -484,25 +599,32 @@ function mulaiScanBuku() {
 
     function(decodedText) {
 
+      const idBuku =
+        String(decodedText || "").trim();
+
+
       console.log(
         "QR BUKU TERBACA:",
-        decodedText
+        idBuku
       );
+
+
+      if (!idBuku) {
+        return;
+      }
 
 
       stopScanner();
 
 
-      cariBukuAPI(
-        decodedText.trim()
-      );
+      cariBukuAPI(idBuku);
 
     },
 
 
     function(errorMessage) {
 
-      // Tidak perlu ditampilkan
+      // Abaikan error scan sementara
 
     }
 
@@ -514,6 +636,9 @@ function mulaiScanBuku() {
       "ERROR KAMERA BUKU:",
       error
     );
+
+
+    scannerAktif = null;
 
 
     alert(
@@ -528,7 +653,7 @@ function mulaiScanBuku() {
 
 /*************************************************
  * CARI BUKU
- * MENGGUNAKAN JSONP
+ * JSONP
  *************************************************/
 
 function cariBukuAPI(idBuku) {
@@ -537,73 +662,79 @@ function cariBukuAPI(idBuku) {
     document.getElementById("dataBuku");
 
 
+  if (!area) {
+    return;
+  }
+
+
+  idBuku =
+    String(idBuku || "").trim();
+
+
+  if (!idBuku) {
+
+    area.innerHTML = `
+      <div class="error">
+        ID buku kosong.
+      </div>
+    `;
+
+    return;
+
+  }
+
+
   area.innerHTML =
-    "Mencari data buku...";
+    "🔍 Mencari data buku...";
 
 
-  const callbackName =
-    "__cariBuku_" +
-    Date.now();
+  bukuAktif = null;
 
 
-  const script =
-    document.createElement("script");
+  panggilJSONP(
 
+    "cari_buku",
 
-  script.src =
-    API_URL +
-    "?action=cari_buku" +
-    "&idBuku=" +
-    encodeURIComponent(idBuku) +
-    "&callback=" +
-    callbackName;
+    {
+      idBuku: idBuku
+    },
 
-
-  window[callbackName] =
-    function(data) {
+    function(error, data) {
 
       console.log(
         "HASIL CARI BUKU:",
+        error,
         data
       );
 
 
-      try {
+      if (error) {
 
-        delete window[
-          callbackName
-        ];
+        area.innerHTML = `
+          <div class="error">
 
-      } catch (e) {
+            ❌ Gagal terhubung ke server.
 
-        window[
-          callbackName
-        ] = undefined;
+            <br><br>
 
-      }
+            <small>
+              ${error.message}
+            </small>
 
+          </div>
+        `;
 
-      if (script.parentNode) {
-
-        script.parentNode
-          .removeChild(script);
+        return;
 
       }
 
 
       if (!data) {
 
-        bukuAktif = null;
-
-
         area.innerHTML = `
-
           <div class="error">
-
-            Data buku kosong.
-
+            ❌ Data buku kosong.
           </div>
-
         `;
 
         return;
@@ -625,32 +756,32 @@ function cariBukuAPI(idBuku) {
             <br><br>
 
             <b>Judul:</b>
-            ${data.judul_buku}
+            ${data.judul_buku || "-"}
 
             <br>
 
             <b>Penulis:</b>
-            ${data.penulis}
+            ${data.penulis || "-"}
 
             <br>
 
             <b>Penerbit:</b>
-            ${data.penerbit}
+            ${data.penerbit || "-"}
 
             <br>
 
             <b>Kategori:</b>
-            ${data.kategori}
+            ${data.kategori || "-"}
 
             <br>
 
             <b>Tahun:</b>
-            ${data.tahun}
+            ${data.tahun || "-"}
 
             <br>
 
             <b>Stok:</b>
-            ${data.stok}
+            ${data.stok ?? "-"}
 
           </div>
 
@@ -667,7 +798,10 @@ function cariBukuAPI(idBuku) {
 
           <div class="error">
 
-            ❌ ${data.message || "Data buku tidak ditemukan"}
+            ❌ ${
+              data.message ||
+              "Data buku tidak ditemukan"
+            }
 
           </div>
 
@@ -675,68 +809,12 @@ function cariBukuAPI(idBuku) {
 
       }
 
-    };
+    }
 
-
-  script.onerror =
-    function() {
-
-      console.error(
-        "JSONP CARI BUKU GAGAL"
-      );
-
-
-      try {
-
-        delete window[
-          callbackName
-        ];
-
-      } catch (e) {
-
-        window[
-          callbackName
-        ] = undefined;
-
-      }
-
-
-      if (script.parentNode) {
-
-        script.parentNode
-          .removeChild(script);
-
-      }
-
-
-      bukuAktif = null;
-
-
-      area.innerHTML = `
-
-        <div class="error">
-
-          ❌ Google Apps Script tidak dapat diakses.
-
-          <br><br>
-
-          <small>
-            Pastikan Web App sudah di-deploy
-            sebagai "Anyone".
-          </small>
-
-        </div>
-
-      `;
-
-    };
-
-
-  document.body.appendChild(
-    script
   );
 
 }
+
 
 /*************************************************
  * PROSES PINJAM
@@ -746,6 +824,11 @@ async function prosesPinjam() {
 
   const hasil =
     document.getElementById("hasilPinjam");
+
+
+  if (!hasil) {
+    return;
+  }
 
 
   if (!siswaAktif) {
@@ -782,7 +865,6 @@ async function prosesPinjam() {
         API_URL,
 
         {
-
           method: "POST",
 
           body:
@@ -813,22 +895,22 @@ async function prosesPinjam() {
 
         <div class="hasil-card success">
 
-          ✓ ${data.message}
+          ✓ ${data.message || "Peminjaman berhasil"}
 
           <br><br>
 
           Siswa:
-          ${data.nama_siswa}
+          ${data.nama_siswa || siswaAktif.nama_siswa}
 
           <br>
 
           Buku:
-          ${data.judul_buku}
+          ${data.judul_buku || bukuAktif.judul_buku}
 
           <br>
 
           Batas kembali:
-          ${data.batas_kembali}
+          ${data.batas_kembali || "-"}
 
         </div>
 
@@ -836,7 +918,6 @@ async function prosesPinjam() {
 
 
       siswaAktif = null;
-
       bukuAktif = null;
 
 
@@ -850,7 +931,10 @@ async function prosesPinjam() {
 
         <div class="error">
 
-          ${data.message}
+          ❌ ${
+            data.message ||
+            "Peminjaman gagal"
+          }
 
         </div>
 
@@ -862,13 +946,23 @@ async function prosesPinjam() {
 
   catch(error) {
 
-    console.error(error);
+    console.error(
+      "ERROR PINJAM:",
+      error
+    );
+
 
     hasil.innerHTML = `
 
       <div class="error">
 
-        Gagal memproses peminjaman
+        ❌ Gagal memproses peminjaman
+
+        <br><br>
+
+        <small>
+          ${error.message}
+        </small>
 
       </div>
 
@@ -888,13 +982,42 @@ function mulaiScanPengembalian() {
   stopScanner();
 
 
-  scannerAktif =
-    new Html5Qrcode(
-      "readerKembali"
+  const reader =
+    document.getElementById("readerKembali");
+
+
+  if (!reader) {
+
+    alert(
+      "Area scanner pengembalian tidak ditemukan."
     );
 
+    return;
 
-  scannerAktif.start(
+  }
+
+
+  reader.innerHTML = "";
+
+
+  if (typeof Html5Qrcode === "undefined") {
+
+    alert(
+      "Library scanner belum dimuat."
+    );
+
+    return;
+
+  }
+
+
+  const scanner =
+    new Html5Qrcode("readerKembali");
+
+  scannerAktif = scanner;
+
+
+  scanner.start(
 
     {
       facingMode: "environment"
@@ -912,11 +1035,19 @@ function mulaiScanPengembalian() {
 
     function(decodedText) {
 
+      const idSiswa =
+        String(decodedText || "").trim();
+
+
+      if (!idSiswa) {
+        return;
+      }
+
+
       stopScanner();
 
-      tampilkanPinjamanSiswa(
-        decodedText
-      );
+
+      tampilkanPinjamanSiswa(idSiswa);
 
     },
 
@@ -927,8 +1058,17 @@ function mulaiScanPengembalian() {
 
   .catch(function(error) {
 
+    console.error(
+      "ERROR SCANNER PENGEMBALIAN:",
+      error
+    );
+
+
+    scannerAktif = null;
+
+
     alert(
-      "Kamera tidak dapat dibuka: " +
+      "Kamera tidak dapat dibuka.\n\n" +
       error
     );
 
@@ -941,7 +1081,7 @@ function mulaiScanPengembalian() {
  * TAMPILKAN PINJAMAN SISWA
  *************************************************/
 
-async function tampilkanPinjamanSiswa(idSiswa) {
+function tampilkanPinjamanSiswa(idSiswa) {
 
   const area =
     document.getElementById(
@@ -949,107 +1089,155 @@ async function tampilkanPinjamanSiswa(idSiswa) {
     );
 
 
+  if (!area) {
+    return;
+  }
+
+
+  idSiswa =
+    String(idSiswa || "").trim();
+
+
   area.innerHTML =
-    "Mencari buku yang dipinjam...";
+    "🔍 Mencari buku yang dipinjam...";
 
 
-  try {
+  panggilJSONP(
 
-    const url =
+    "lihat_pinjaman",
 
-      API_URL +
+    {
+      idSiswa: idSiswa
+    },
 
-      "?action=lihat_pinjaman&idSiswa=" +
+    function(error, data) {
 
-      encodeURIComponent(idSiswa);
-
-
-    const response =
-      await fetch(url);
-
-
-    const data =
-      await response.json();
+      console.log(
+        "PINJAMAN SISWA:",
+        error,
+        data
+      );
 
 
-    if (!data || data.length === 0) {
+      if (error) {
 
-      area.innerHTML = `
+        area.innerHTML = `
 
-        <div class="warning">
+          <div class="error">
 
-          Tidak ada buku yang sedang dipinjam.
+            ❌ Gagal mengambil data pinjaman
 
-        </div>
+            <br><br>
 
-      `;
+            <small>
+              ${error.message}
+            </small>
 
-      return;
+          </div>
+
+        `;
+
+        return;
+
+      }
+
+
+      if (!data) {
+
+        area.innerHTML = `
+          <div class="warning">
+            Tidak ada data pinjaman.
+          </div>
+        `;
+
+        return;
+
+      }
+
+
+      if (!Array.isArray(data)) {
+
+        if (data.success === false) {
+
+          area.innerHTML = `
+            <div class="error">
+              ❌ ${data.message || "Gagal mengambil pinjaman"}
+            </div>
+          `;
+
+          return;
+
+        }
+
+        data = [];
+
+      }
+
+
+      if (data.length === 0) {
+
+        area.innerHTML = `
+
+          <div class="warning">
+
+            Tidak ada buku yang sedang dipinjam.
+
+          </div>
+
+        `;
+
+        return;
+
+      }
+
+
+      let html = "";
+
+
+      data.forEach(function(item) {
+
+        html += `
+
+          <div class="hasil-card">
+
+            <b>${item.judul_buku || "-"}</b>
+
+            <br>
+
+            ID Buku:
+            ${item.id_buku || "-"}
+
+            <br>
+
+            Pinjam:
+            ${item.tanggal_pinjam || "-"}
+
+            <br>
+
+            Batas:
+            ${item.batas_kembali || "-"}
+
+            <br><br>
+
+            <button
+              onclick="prosesKembalikan('${item.id_transaksi}')">
+
+              KEMBALIKAN BUKU
+
+            </button>
+
+          </div>
+
+        `;
+
+      });
+
+
+      area.innerHTML = html;
 
     }
 
-
-    let html = "";
-
-
-    data.forEach(function(item) {
-
-      html += `
-
-        <div class="hasil-card">
-
-          <b>${item.judul_buku}</b>
-
-          <br>
-
-          ID Buku:
-          ${item.id_buku}
-
-          <br>
-
-          Pinjam:
-          ${item.tanggal_pinjam}
-
-          <br>
-
-          Batas:
-          ${item.batas_kembali}
-
-          <br><br>
-
-          <button
-            onclick="prosesKembalikan('${item.id_transaksi}')">
-
-            KEMBALIKAN BUKU
-
-          </button>
-
-        </div>
-
-      `;
-
-    });
-
-
-    area.innerHTML = html;
-
-  }
-
-  catch(error) {
-
-    console.error(error);
-
-    area.innerHTML = `
-
-      <div class="error">
-
-        Gagal mengambil data pinjaman
-
-      </div>
-
-    `;
-
-  }
+  );
 
 }
 
@@ -1067,9 +1255,7 @@ async function prosesKembalikan(idTransaksi) {
 
 
   if (!konfirmasi) {
-
     return;
-
   }
 
 
@@ -1081,7 +1267,6 @@ async function prosesKembalikan(idTransaksi) {
         API_URL,
 
         {
-
           method: "POST",
 
           body:
@@ -1108,24 +1293,29 @@ async function prosesKembalikan(idTransaksi) {
 
       alert(
 
-        data.message +
+        (data.message || "Buku berhasil dikembalikan") +
 
         "\nTerlambat: " +
 
-        data.terlambat_hari +
+        (data.terlambat_hari || 0) +
 
         " hari"
 
       );
 
 
-      document
-        .getElementById(
+      const area =
+        document.getElementById(
           "dataPengembalian"
-        )
-        .innerHTML =
+        );
 
-        "Buku berhasil dikembalikan";
+
+      if (area) {
+
+        area.innerHTML =
+          "✓ Buku berhasil dikembalikan.";
+
+      }
 
 
       loadStatistik();
@@ -1134,7 +1324,10 @@ async function prosesKembalikan(idTransaksi) {
 
     else {
 
-      alert(data.message);
+      alert(
+        data.message ||
+        "Gagal mengembalikan buku"
+      );
 
     }
 
@@ -1142,10 +1335,15 @@ async function prosesKembalikan(idTransaksi) {
 
   catch(error) {
 
-    console.error(error);
+    console.error(
+      "ERROR KEMBALIKAN:",
+      error
+    );
+
 
     alert(
-      "Gagal mengembalikan buku"
+      "Gagal mengembalikan buku.\n\n" +
+      error.message
     );
 
   }
@@ -1154,7 +1352,7 @@ async function prosesKembalikan(idTransaksi) {
 
 
 /*************************************************
- * SCAN QR UNTUK BUKU YANG DIPINJAM
+ * SCAN QR BUKU YANG DIPINJAM
  *************************************************/
 
 function mulaiScanPinjaman() {
@@ -1182,13 +1380,26 @@ function mulaiScanPinjaman() {
   reader.innerHTML = "";
 
 
-  scannerAktif =
+  if (typeof Html5Qrcode === "undefined") {
+
+    alert(
+      "Library scanner belum dimuat."
+    );
+
+    return;
+
+  }
+
+
+  const scanner =
     new Html5Qrcode(
       "readerPinjaman"
     );
 
+  scannerAktif = scanner;
 
-  scannerAktif.start(
+
+  scanner.start(
 
     {
       facingMode: "environment"
@@ -1206,6 +1417,15 @@ function mulaiScanPinjaman() {
 
     function(decodedText) {
 
+      const idSiswa =
+        String(decodedText || "").trim();
+
+
+      if (!idSiswa) {
+        return;
+      }
+
+
       stopScanner();
 
 
@@ -1216,23 +1436,18 @@ function mulaiScanPinjaman() {
 
 
       if (input) {
-
-        input.value =
-          decodedText;
-
+        input.value = idSiswa;
       }
 
 
-      tampilkanHasilPinjaman(
-        decodedText
-      );
+      tampilkanHasilPinjaman(idSiswa);
 
     },
 
 
     function(errorMessage) {
 
-      // QR belum ditemukan
+      // Abaikan QR belum ditemukan
 
     }
 
@@ -1241,13 +1456,16 @@ function mulaiScanPinjaman() {
   .catch(function(error) {
 
     console.error(
-      "Scanner pinjaman:",
+      "SCANNER PINJAMAN:",
       error
     );
 
 
+    scannerAktif = null;
+
+
     alert(
-      "Kamera tidak dapat dibuka. Pastikan izin kamera diberikan.\n\n" +
+      "Kamera tidak dapat dibuka.\n\n" +
       error
     );
 
@@ -1294,9 +1512,7 @@ function cariPinjamanManual() {
   }
 
 
-  tampilkanHasilPinjaman(
-    id
-  );
+  tampilkanHasilPinjaman(id);
 
 }
 
@@ -1305,7 +1521,7 @@ function cariPinjamanManual() {
  * TAMPILKAN HASIL PINJAMAN
  *************************************************/
 
-async function tampilkanHasilPinjaman(idSiswa) {
+function tampilkanHasilPinjaman(idSiswa) {
 
   const area =
     document.getElementById(
@@ -1314,125 +1530,133 @@ async function tampilkanHasilPinjaman(idSiswa) {
 
 
   if (!area) {
-
     return;
-
   }
+
+
+  idSiswa =
+    String(idSiswa || "").trim();
 
 
   area.innerHTML =
-    "Memuat data...";
+    "🔍 Memuat data...";
 
 
-  try {
+  panggilJSONP(
 
-    const url =
+    "lihat_pinjaman",
 
-      API_URL +
+    {
+      idSiswa: idSiswa
+    },
 
-      "?action=lihat_pinjaman&idSiswa=" +
+    function(error, data) {
 
-      encodeURIComponent(idSiswa);
-
-
-    const response =
-      await fetch(url);
-
-
-    if (!response.ok) {
-
-      throw new Error(
-        "HTTP " +
-        response.status
+      console.log(
+        "HASIL PINJAMAN:",
+        error,
+        data
       );
 
+
+      if (error) {
+
+        area.innerHTML = `
+
+          <div class="error">
+
+            ❌ Gagal mengambil data pinjaman
+
+            <br><br>
+
+            <small>
+              ${error.message}
+            </small>
+
+          </div>
+
+        `;
+
+        return;
+
+      }
+
+
+      if (!Array.isArray(data)) {
+
+        if (data && data.success === false) {
+
+          area.innerHTML = `
+            <div class="error">
+              ❌ ${data.message || "Gagal mengambil data"}
+            </div>
+          `;
+
+          return;
+
+        }
+
+        data = [];
+
+      }
+
+
+      if (data.length === 0) {
+
+        area.innerHTML = `
+
+          <div class="warning">
+
+            Tidak ada buku yang sedang dipinjam.
+
+          </div>
+
+        `;
+
+        return;
+
+      }
+
+
+      let html = "";
+
+
+      data.forEach(function(item) {
+
+        html += `
+
+          <div class="hasil-card">
+
+            <b>📖 ${item.judul_buku || "-"}</b>
+
+            <br><br>
+
+            ID Buku:
+            ${item.id_buku || "-"}
+
+            <br>
+
+            Tanggal Pinjam:
+            ${item.tanggal_pinjam || "-"}
+
+            <br>
+
+            Batas Kembali:
+            ${item.batas_kembali || "-"}
+
+          </div>
+
+        `;
+
+      });
+
+
+      area.innerHTML =
+        html;
+
     }
 
-
-    const data =
-      await response.json();
-
-
-    if (!data || data.length === 0) {
-
-      area.innerHTML = `
-
-        <div class="warning">
-
-          Tidak ada buku yang sedang dipinjam.
-
-        </div>
-
-      `;
-
-      return;
-
-    }
-
-
-    let html = "";
-
-
-    data.forEach(function(item) {
-
-      html += `
-
-        <div class="hasil-card">
-
-          <b>📖 ${item.judul_buku}</b>
-
-          <br><br>
-
-          ID Buku:
-          ${item.id_buku}
-
-          <br>
-
-          Tanggal Pinjam:
-          ${item.tanggal_pinjam}
-
-          <br>
-
-          Batas Kembali:
-          ${item.batas_kembali}
-
-        </div>
-
-      `;
-
-    });
-
-
-    area.innerHTML =
-      html;
-
-  }
-
-  catch(error) {
-
-    console.error(
-      "Error lihat pinjaman:",
-      error
-    );
-
-
-    area.innerHTML = `
-
-      <div class="error">
-
-        Gagal mengambil data pinjaman
-
-        <br>
-
-        <small>
-          ${error.message}
-        </small>
-
-      </div>
-
-    `;
-
-  }
+  );
 
 }
 
@@ -1441,7 +1665,7 @@ async function tampilkanHasilPinjaman(idSiswa) {
  * LOAD KETERLAMBATAN
  *************************************************/
 
-async function loadKeterlambatan() {
+function loadKeterlambatan() {
 
   const area =
     document.getElementById(
@@ -1450,135 +1674,138 @@ async function loadKeterlambatan() {
 
 
   if (!area) {
-
     return;
-
   }
 
 
   area.innerHTML =
-    "Memuat data...";
+    "🔍 Memuat data...";
 
 
-  try {
+  panggilJSONP(
 
-    const response =
-      await fetch(
+    "keterlambatan",
 
-        API_URL +
-        "?action=keterlambatan"
+    {},
 
+    function(error, data) {
+
+      console.log(
+        "KETERLAMBATAN:",
+        error,
+        data
       );
 
 
-    if (!response.ok) {
+      if (error) {
 
-      throw new Error(
-        "HTTP " +
-        response.status
-      );
+        area.innerHTML = `
+
+          <div class="error">
+
+            ❌ Gagal mengambil data keterlambatan
+
+            <br><br>
+
+            <small>
+              ${error.message}
+            </small>
+
+          </div>
+
+        `;
+
+        return;
+
+      }
+
+
+      if (!Array.isArray(data)) {
+
+        if (data && data.success === false) {
+
+          area.innerHTML = `
+            <div class="error">
+              ❌ ${data.message || "Gagal mengambil data"}
+            </div>
+          `;
+
+          return;
+
+        }
+
+        data = [];
+
+      }
+
+
+      if (data.length === 0) {
+
+        area.innerHTML = `
+
+          <div class="hasil-card">
+
+            Tidak ada keterlambatan.
+
+          </div>
+
+        `;
+
+        return;
+
+      }
+
+
+      let html = "";
+
+
+      data.forEach(function(item) {
+
+        html += `
+
+          <div class="hasil-card">
+
+            <b>⚠️ ${item.nama_siswa || "-"}</b>
+
+            <br>
+
+            Kelas:
+            ${item.kelas || "-"}
+
+            <br>
+
+            Buku:
+            ${item.judul_buku || "-"}
+
+            <br>
+
+            Terlambat:
+
+            <span class="warning">
+
+              ${item.terlambat_hari || 0} hari
+
+            </span>
+
+          </div>
+
+        `;
+
+      });
+
+
+      area.innerHTML =
+        html;
 
     }
 
-
-    const data =
-      await response.json();
-
-
-    if (!data || data.length === 0) {
-
-      area.innerHTML = `
-
-        <div class="hasil-card">
-
-          Tidak ada keterlambatan.
-
-        </div>
-
-      `;
-
-      return;
-
-    }
-
-
-    let html = "";
-
-
-    data.forEach(function(item) {
-
-      html += `
-
-        <div class="hasil-card">
-
-          <b>⚠️ ${item.nama_siswa}</b>
-
-          <br>
-
-          Kelas:
-          ${item.kelas}
-
-          <br>
-
-          Buku:
-          ${item.judul_buku}
-
-          <br>
-
-          Terlambat:
-
-          <span class="warning">
-
-            ${item.terlambat_hari} hari
-
-          </span>
-
-        </div>
-
-      `;
-
-    });
-
-
-    area.innerHTML =
-      html;
-
-  }
-
-  catch(error) {
-
-    console.error(
-      "Error keterlambatan:",
-      error
-    );
-
-
-    area.innerHTML = `
-
-      <div class="error">
-
-        Gagal mengambil data keterlambatan
-
-        <br>
-
-        <small>
-          ${error.message}
-        </small>
-
-      </div>
-
-    `;
-
-  }
+  );
 
 }
 
 
 /*************************************************
  * STATISTIK PERPUSTAKAAN
- *
- * Menggunakan JSONP supaya GitHub Pages
- * tidak terkena masalah CORS / Failed to fetch.
  *************************************************/
 
 function loadStatistik() {
@@ -1590,20 +1817,16 @@ function loadStatistik() {
 
 
   if (!area) {
-
-    console.error(
-      "Elemen #statistik tidak ditemukan"
-    );
-
     return;
-
   }
 
 
   area.innerHTML = `
 
     <div class="statistik-title">
+
       📊 STATUS PERPUSTAKAAN
+
     </div>
 
     <div style="
@@ -1618,68 +1841,50 @@ function loadStatistik() {
   `;
 
 
-  const callbackName =
-    "__statistikCallback_" +
-    Date.now();
+  panggilJSONP(
 
+    "statistik",
 
-  const script =
-    document.createElement(
-      "script"
-    );
+    {},
 
-
-  script.src =
-    API_URL +
-    "?action=statistik&callback=" +
-    encodeURIComponent(
-      callbackName
-    );
-
-
-  script.async = true;
-
-
-  let selesai = false;
-
-
-  window[callbackName] =
-    function(data) {
-
-      selesai = true;
-
+    function(error, data) {
 
       console.log(
-        "Data statistik:",
+        "DATA STATISTIK:",
+        error,
         data
       );
 
 
-      try {
+      if (error) {
 
-        delete window[
-          callbackName
-        ];
+        area.innerHTML = `
 
-      }
+          <div class="statistik-title">
 
-      catch(error) {
+            📊 STATUS PERPUSTAKAAN
 
-        window[
-          callbackName
-        ] = undefined;
+          </div>
 
-      }
+          <div style="
+            padding:15px;
+            color:#dc2626;
+            text-align:center;
+          ">
 
+            ❌ Gagal memuat statistik
 
-      if (
-        script.parentNode
-      ) {
+            <br>
 
-        script.parentNode
-          .removeChild(
-            script
-          );
+            <small>
+              ${error.message}
+            </small>
+
+          </div>
+
+        `;
+
+        return;
 
       }
 
@@ -1689,7 +1894,9 @@ function loadStatistik() {
         area.innerHTML = `
 
           <div class="statistik-title">
+
             📊 STATUS PERPUSTAKAAN
+
           </div>
 
           <div style="
@@ -1709,14 +1916,14 @@ function loadStatistik() {
       }
 
 
-      if (
-        data.success === false
-      ) {
+      if (data.success === false) {
 
         area.innerHTML = `
 
           <div class="statistik-title">
+
             📊 STATUS PERPUSTAKAAN
+
           </div>
 
           <div style="
@@ -1730,12 +1937,10 @@ function loadStatistik() {
             <br>
 
             <small>
-
               ${
                 data.message ||
                 "API statistik gagal"
               }
-
             </small>
 
           </div>
@@ -1748,21 +1953,15 @@ function loadStatistik() {
 
 
       const dipinjam =
-        Number(
-          data.dipinjam
-        ) || 0;
+        Number(data.dipinjam) || 0;
 
 
       const dikembalikan =
-        Number(
-          data.dikembalikan
-        ) || 0;
+        Number(data.dikembalikan) || 0;
 
 
       const terlambat =
-        Number(
-          data.terlambat
-        ) || 0;
+        Number(data.terlambat) || 0;
 
 
       area.innerHTML = `
@@ -1780,25 +1979,17 @@ function loadStatistik() {
           <div class="statistik-card">
 
             <div class="statistik-icon">
-
               📕
-            
             </div>
-
 
             <div class="statistik-info">
 
               <div class="statistik-label">
-
                 Sedang Dipinjam
-
               </div>
 
-
               <div class="statistik-number">
-
                 ${dipinjam}
-
               </div>
 
             </div>
@@ -1806,59 +1997,41 @@ function loadStatistik() {
           </div>
 
 
-
           <div class="statistik-card">
 
             <div class="statistik-icon">
-
               ✅
-
             </div>
-
 
             <div class="statistik-info">
 
               <div class="statistik-label">
-
                 Dikembalikan
-
               </div>
 
-
               <div class="statistik-number">
-
                 ${dikembalikan}
-
               </div>
 
             </div>
 
           </div>
-
 
 
           <div class="statistik-card">
 
             <div class="statistik-icon">
-
               ⚠️
-
             </div>
-
 
             <div class="statistik-info">
 
               <div class="statistik-label">
-
                 Terlambat
-
               </div>
 
-
               <div class="statistik-number">
-
                 ${terlambat}
-
               </div>
 
             </div>
@@ -1870,95 +2043,15 @@ function loadStatistik() {
 
       `;
 
-    };
+    }
 
-
-  script.onerror =
-    function() {
-
-      if (selesai) {
-
-        return;
-
-      }
-
-
-      console.error(
-        "API statistik gagal diakses"
-      );
-
-
-      try {
-
-        delete window[
-          callbackName
-        ];
-
-      }
-
-      catch(error) {
-
-        window[
-          callbackName
-        ] = undefined;
-
-      }
-
-
-      if (
-        script.parentNode
-      ) {
-
-        script.parentNode
-          .removeChild(
-            script
-          );
-
-      }
-
-
-      area.innerHTML = `
-
-        <div class="statistik-title">
-
-          📊 STATUS PERPUSTAKAAN
-
-        </div>
-
-
-        <div style="
-          padding:15px;
-          color:#dc2626;
-          text-align:center;
-        ">
-
-          ❌ Gagal memuat statistik
-
-          <br>
-
-          <small>
-
-            API Google Apps Script
-            tidak dapat diakses
-
-          </small>
-
-        </div>
-
-      `;
-
-    };
-
-
-  document.body.appendChild(
-    script
   );
 
 }
 
 
 /*************************************************
- * LOAD STATISTIK SAAT HALAMAN DIBUKA
+ * SAAT HALAMAN DIBUKA
  *************************************************/
 
 document.addEventListener(
