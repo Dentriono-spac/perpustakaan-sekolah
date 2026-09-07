@@ -1054,37 +1054,65 @@ async function loadKeterlambatan() {
  * STATISTIK PERPUSTAKAAN
  *************************************************/
 
+/*************************************************
+ * STATISTIK PERPUSTAKAAN
+ *************************************************/
+
 async function loadStatistik() {
 
   const area = document.getElementById("statistik");
 
   if (!area) {
-    console.warn("Elemen #statistik tidak ditemukan.");
+    console.error("Elemen #statistik tidak ditemukan");
     return;
   }
 
-  area.innerHTML = `
-    <div class="statistik-title">
-      📊 STATUS PERPUSTAKAAN
-    </div>
-    <div class="statistik-loading">
-      Memuat statistik...
-    </div>
-  `;
+  area.innerHTML = "Memuat statistik...";
 
   try {
 
-    const response = await fetch(
-      API_URL + "?action=statistik"
+    const url =
+      API_URL +
+      "?action=statistik";
+
+    console.log("Memanggil statistik:", url);
+
+    const response =
+      await fetch(url, {
+        method: "GET",
+        cache: "no-store"
+      });
+
+    console.log(
+      "Status API statistik:",
+      response.status
     );
 
-    const data = await response.json();
-
-    if (!data || data.success === false) {
+    if (!response.ok) {
       throw new Error(
-        data && data.message
-          ? data.message
-          : "Statistik tidak dapat dimuat"
+        "HTTP Error " +
+        response.status
+      );
+    }
+
+    const data =
+      await response.json();
+
+    console.log(
+      "Data statistik:",
+      data
+    );
+
+    if (!data) {
+      throw new Error(
+        "API tidak mengembalikan data"
+      );
+    }
+
+    if (data.success === false) {
+      throw new Error(
+        data.message ||
+        "API statistik gagal"
       );
     }
 
@@ -1097,9 +1125,13 @@ async function loadStatistik() {
       <div class="statistik-grid">
 
         <div class="statistik-card">
-          <div class="statistik-icon">📕</div>
+
+          <div class="statistik-icon">
+            📕
+          </div>
 
           <div class="statistik-info">
+
             <div class="statistik-label">
               Sedang Dipinjam
             </div>
@@ -1107,14 +1139,20 @@ async function loadStatistik() {
             <div class="statistik-number">
               ${Number(data.dipinjam) || 0}
             </div>
+
           </div>
+
         </div>
 
 
         <div class="statistik-card">
-          <div class="statistik-icon">✅</div>
+
+          <div class="statistik-icon">
+            ✅
+          </div>
 
           <div class="statistik-info">
+
             <div class="statistik-label">
               Dikembalikan
             </div>
@@ -1122,14 +1160,20 @@ async function loadStatistik() {
             <div class="statistik-number">
               ${Number(data.dikembalikan) || 0}
             </div>
+
           </div>
+
         </div>
 
 
         <div class="statistik-card">
-          <div class="statistik-icon">⚠️</div>
+
+          <div class="statistik-icon">
+            ⚠️
+          </div>
 
           <div class="statistik-info">
+
             <div class="statistik-label">
               Terlambat
             </div>
@@ -1137,31 +1181,50 @@ async function loadStatistik() {
             <div class="statistik-number">
               ${Number(data.terlambat) || 0}
             </div>
+
           </div>
+
         </div>
 
       </div>
     `;
 
-  } catch (error) {
+  }
+
+  catch (error) {
 
     console.error(
-      "Gagal memuat statistik:",
+      "ERROR STATISTIK:",
       error
     );
 
     area.innerHTML = `
+
       <div class="statistik-title">
         📊 STATUS PERPUSTAKAAN
       </div>
 
-      <div class="error">
-        Statistik belum dapat dimuat
-      </div>
-    `;
-  }
-}
+      <div style="
+        padding:15px;
+        color:#dc2626;
+        text-align:center;
+      ">
 
+        ❌ Gagal memuat statistik
+
+        <br>
+
+        <small>
+          ${error.message}
+        </small>
+
+      </div>
+
+    `;
+
+  }
+
+}
 
 /*************************************************
  * LOAD STATISTIK SAAT HALAMAN DIBUKA
@@ -1169,6 +1232,15 @@ async function loadStatistik() {
 
 document.addEventListener(
   "DOMContentLoaded",
+  function() {
+
+    loadStatistik();
+
+  }
+);
+
+window.addEventListener(
+  "load",
   function() {
 
     loadStatistik();
