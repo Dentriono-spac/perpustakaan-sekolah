@@ -208,18 +208,55 @@
     <h2>📖 BUKU YANG DIPINJAM</h2>
 
 
-    <input
-      type="text"
-      id="inputCariSiswa"
-      placeholder="Masukkan ID Siswa"
-    >
+    <div class="card">
+
+      <h3>Scan QR Siswa</h3>
 
 
-    <button onclick="cariPinjamanManual()">
+      <button onclick="mulaiScanPinjaman()">
 
-      Cari
+        📷 Scan QR Siswa
 
-    </button>
+      </button>
+
+
+      <div id="readerPinjaman"
+           style="width:100%;margin-top:15px;">
+      </div>
+
+
+      <div style="
+        margin-top:10px;
+        text-align:center;
+        color:#666;
+      ">
+
+        Scan QR siswa untuk melihat buku yang sedang dipinjam.
+
+      </div>
+
+    </div>
+
+
+    <div class="card">
+
+      <h3>Atau Masukkan ID Siswa</h3>
+
+
+      <input
+        type="text"
+        id="inputCariSiswa"
+        placeholder="Masukkan ID Siswa"
+      >
+
+
+      <button onclick="cariPinjamanManual()">
+
+        Cari
+
+      </button>
+
+    </div>
 
 
     <div id="hasilPinjaman"></div>
@@ -261,7 +298,7 @@
 </div>
 
 
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 
 
 </body>
