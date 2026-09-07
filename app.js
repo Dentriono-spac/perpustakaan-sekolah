@@ -1230,20 +1230,6 @@ async function loadStatistik() {
  * LOAD STATISTIK SAAT HALAMAN DIBUKA
  *************************************************/
 
-document.addEventListener(
-  "DOMContentLoaded",
-  function() {
-
-    loadStatistik();
-
-  }
-);
-
-window.addEventListener(
-  "load",
-  function() {
-
-    loadStatistik();
-
-  }
-);
+document.addEventListener("DOMContentLoaded", function () {
+  loadStatistik();
+});
