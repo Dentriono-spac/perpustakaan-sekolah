@@ -29,7 +29,8 @@ function bukaMenu(namaMenu) {
     .add("hidden");
 
 
-  const halaman = document.querySelectorAll(".halaman");
+  const halaman =
+    document.querySelectorAll(".halaman");
 
 
   halaman.forEach(function(item) {
@@ -525,6 +526,9 @@ async function prosesPinjam() {
 
       bukuAktif = null;
 
+
+      loadStatistik();
+
     }
 
     else {
@@ -811,6 +815,8 @@ async function prosesKembalikan(idTransaksi) {
         "Buku berhasil dikembalikan";
 
 
+      loadStatistik();
+
     }
 
     else {
@@ -835,19 +841,133 @@ async function prosesKembalikan(idTransaksi) {
 
 
 /*************************************************
+ * SCAN QR UNTUK BUKU YANG DIPINJAM
+ *************************************************/
+
+function mulaiScanPinjaman() {
+
+  stopScanner();
+
+
+  const reader =
+    document.getElementById(
+      "readerPinjaman"
+    );
+
+
+  if (!reader) {
+
+    alert(
+      "Area scanner tidak ditemukan."
+    );
+
+    return;
+
+  }
+
+
+  reader.innerHTML = "";
+
+
+  scannerAktif =
+    new Html5Qrcode(
+      "readerPinjaman"
+    );
+
+
+  scannerAktif.start(
+
+    {
+      facingMode: "environment"
+    },
+
+    {
+      fps: 10,
+
+      qrbox: {
+        width: 250,
+        height: 250
+      }
+    },
+
+
+    function(decodedText) {
+
+      stopScanner();
+
+
+      const input =
+        document.getElementById(
+          "inputCariSiswa"
+        );
+
+
+      if (input) {
+
+        input.value =
+          decodedText;
+
+      }
+
+
+      tampilkanHasilPinjaman(
+        decodedText
+      );
+
+    },
+
+
+    function(errorMessage) {
+
+      // QR belum ditemukan
+
+    }
+
+  )
+
+  .catch(function(error) {
+
+    console.error(
+      "Scanner pinjaman:",
+      error
+    );
+
+
+    alert(
+      "Kamera tidak dapat dibuka. Pastikan izin kamera diberikan.\n\n" +
+      error
+    );
+
+  });
+
+}
+
+
+/*************************************************
  * CARI PINJAMAN MANUAL
  *************************************************/
 
 function cariPinjamanManual() {
 
-  const id =
+  const input =
+    document.getElementById(
+      "inputCariSiswa"
+    );
 
-    document
-      .getElementById(
-        "inputCariSiswa"
-      )
-      .value
-      .trim();
+
+  if (!input) {
+
+    alert(
+      "Kolom ID siswa tidak ditemukan."
+    );
+
+    return;
+
+  }
+
+
+  const id =
+    input.value.trim();
 
 
   if (!id) {
@@ -880,6 +1000,13 @@ async function tampilkanHasilPinjaman(idSiswa) {
     );
 
 
+  if (!area) {
+
+    return;
+
+  }
+
+
   area.innerHTML =
     "Memuat data...";
 
@@ -899,14 +1026,31 @@ async function tampilkanHasilPinjaman(idSiswa) {
       await fetch(url);
 
 
+    if (!response.ok) {
+
+      throw new Error(
+        "HTTP " +
+        response.status
+      );
+
+    }
+
+
     const data =
       await response.json();
 
 
     if (!data || data.length === 0) {
 
-      area.innerHTML =
-        "Tidak ada buku dipinjam.";
+      area.innerHTML = `
+
+        <div class="warning">
+
+          Tidak ada buku yang sedang dipinjam.
+
+        </div>
+
+      `;
 
       return;
 
@@ -922,16 +1066,21 @@ async function tampilkanHasilPinjaman(idSiswa) {
 
         <div class="hasil-card">
 
-          <b>${item.judul_buku}</b>
+          <b>📖 ${item.judul_buku}</b>
+
+          <br><br>
+
+          ID Buku:
+          ${item.id_buku}
 
           <br>
 
-          Pinjam:
+          Tanggal Pinjam:
           ${item.tanggal_pinjam}
 
           <br>
 
-          Batas:
+          Batas Kembali:
           ${item.batas_kembali}
 
         </div>
@@ -941,16 +1090,34 @@ async function tampilkanHasilPinjaman(idSiswa) {
     });
 
 
-    area.innerHTML = html;
+    area.innerHTML =
+      html;
 
   }
 
   catch(error) {
 
-    console.error(error);
+    console.error(
+      "Error lihat pinjaman:",
+      error
+    );
 
-    area.innerHTML =
-      "Gagal mengambil data.";
+
+    area.innerHTML = `
+
+      <div class="error">
+
+        Gagal mengambil data pinjaman
+
+        <br>
+
+        <small>
+          ${error.message}
+        </small>
+
+      </div>
+
+    `;
 
   }
 
@@ -969,6 +1136,13 @@ async function loadKeterlambatan() {
     );
 
 
+  if (!area) {
+
+    return;
+
+  }
+
+
   area.innerHTML =
     "Memuat data...";
 
@@ -984,14 +1158,31 @@ async function loadKeterlambatan() {
       );
 
 
+    if (!response.ok) {
+
+      throw new Error(
+        "HTTP " +
+        response.status
+      );
+
+    }
+
+
     const data =
       await response.json();
 
 
     if (!data || data.length === 0) {
 
-      area.innerHTML =
-        "Tidak ada keterlambatan.";
+      area.innerHTML = `
+
+        <div class="hasil-card">
+
+          Tidak ada keterlambatan.
+
+        </div>
+
+      `;
 
       return;
 
@@ -1007,7 +1198,7 @@ async function loadKeterlambatan() {
 
         <div class="hasil-card">
 
-          <b>${item.nama_siswa}</b>
+          <b>⚠️ ${item.nama_siswa}</b>
 
           <br>
 
@@ -1022,6 +1213,7 @@ async function loadKeterlambatan() {
           <br>
 
           Terlambat:
+
           <span class="warning">
 
             ${item.terlambat_hari} hari
@@ -1035,195 +1227,420 @@ async function loadKeterlambatan() {
     });
 
 
-    area.innerHTML = html;
+    area.innerHTML =
+      html;
 
   }
 
   catch(error) {
 
-    console.error(error);
+    console.error(
+      "Error keterlambatan:",
+      error
+    );
 
-    area.innerHTML =
-      "Gagal mengambil data.";
+
+    area.innerHTML = `
+
+      <div class="error">
+
+        Gagal mengambil data keterlambatan
+
+        <br>
+
+        <small>
+          ${error.message}
+        </small>
+
+      </div>
+
+    `;
 
   }
 
 }
 
+
 /*************************************************
  * STATISTIK PERPUSTAKAAN
+ *
+ * Menggunakan JSONP supaya GitHub Pages
+ * tidak terkena masalah CORS / Failed to fetch.
  *************************************************/
 
 function loadStatistik() {
 
-  const area = document.getElementById("statistik");
+  const area =
+    document.getElementById(
+      "statistik"
+    );
+
 
   if (!area) {
-    console.error("Elemen #statistik tidak ditemukan");
+
+    console.error(
+      "Elemen #statistik tidak ditemukan"
+    );
+
     return;
+
   }
 
-  area.innerHTML = "Memuat statistik...";
+
+  area.innerHTML = `
+
+    <div class="statistik-title">
+      📊 STATUS PERPUSTAKAAN
+    </div>
+
+    <div style="
+      padding:15px;
+      text-align:center;
+    ">
+
+      Memuat statistik...
+
+    </div>
+
+  `;
+
 
   const callbackName =
-    "__statistikCallback_" + Date.now();
+    "__statistikCallback_" +
+    Date.now();
 
-  const script = document.createElement("script");
+
+  const script =
+    document.createElement(
+      "script"
+    );
+
 
   script.src =
     API_URL +
     "?action=statistik&callback=" +
-    encodeURIComponent(callbackName);
+    encodeURIComponent(
+      callbackName
+    );
+
+
+  script.async = true;
+
 
   let selesai = false;
 
-  window[callbackName] = function(data) {
 
-    selesai = true;
+  window[callbackName] =
+    function(data) {
 
-    if (script.parentNode) {
-      script.parentNode.removeChild(script);
-    }
+      selesai = true;
 
-    try {
-      delete window[callbackName];
-    } catch (e) {
-      window[callbackName] = undefined;
-    }
 
-    if (!data || data.success === false) {
+      console.log(
+        "Data statistik:",
+        data
+      );
+
+
+      try {
+
+        delete window[
+          callbackName
+        ];
+
+      }
+
+      catch(error) {
+
+        window[
+          callbackName
+        ] = undefined;
+
+      }
+
+
+      if (
+        script.parentNode
+      ) {
+
+        script.parentNode
+          .removeChild(
+            script
+          );
+
+      }
+
+
+      if (!data) {
+
+        area.innerHTML = `
+
+          <div class="statistik-title">
+            📊 STATUS PERPUSTAKAAN
+          </div>
+
+          <div style="
+            padding:15px;
+            color:#dc2626;
+            text-align:center;
+          ">
+
+            ❌ Data statistik kosong
+
+          </div>
+
+        `;
+
+        return;
+
+      }
+
+
+      if (
+        data.success === false
+      ) {
+
+        area.innerHTML = `
+
+          <div class="statistik-title">
+            📊 STATUS PERPUSTAKAAN
+          </div>
+
+          <div style="
+            padding:15px;
+            color:#dc2626;
+            text-align:center;
+          ">
+
+            ❌ Gagal memuat statistik
+
+            <br>
+
+            <small>
+
+              ${
+                data.message ||
+                "API statistik gagal"
+              }
+
+            </small>
+
+          </div>
+
+        `;
+
+        return;
+
+      }
+
+
+      const dipinjam =
+        Number(
+          data.dipinjam
+        ) || 0;
+
+
+      const dikembalikan =
+        Number(
+          data.dikembalikan
+        ) || 0;
+
+
+      const terlambat =
+        Number(
+          data.terlambat
+        ) || 0;
+
 
       area.innerHTML = `
+
         <div class="statistik-title">
+
           📊 STATUS PERPUSTAKAAN
+
         </div>
+
+
+        <div class="statistik-grid">
+
+
+          <div class="statistik-card">
+
+            <div class="statistik-icon">
+
+              📕
+            
+            </div>
+
+
+            <div class="statistik-info">
+
+              <div class="statistik-label">
+
+                Sedang Dipinjam
+
+              </div>
+
+
+              <div class="statistik-number">
+
+                ${dipinjam}
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+
+          <div class="statistik-card">
+
+            <div class="statistik-icon">
+
+              ✅
+
+            </div>
+
+
+            <div class="statistik-info">
+
+              <div class="statistik-label">
+
+                Dikembalikan
+
+              </div>
+
+
+              <div class="statistik-number">
+
+                ${dikembalikan}
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+
+          <div class="statistik-card">
+
+            <div class="statistik-icon">
+
+              ⚠️
+
+            </div>
+
+
+            <div class="statistik-info">
+
+              <div class="statistik-label">
+
+                Terlambat
+
+              </div>
+
+
+              <div class="statistik-number">
+
+                ${terlambat}
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+        </div>
+
+      `;
+
+    };
+
+
+  script.onerror =
+    function() {
+
+      if (selesai) {
+
+        return;
+
+      }
+
+
+      console.error(
+        "API statistik gagal diakses"
+      );
+
+
+      try {
+
+        delete window[
+          callbackName
+        ];
+
+      }
+
+      catch(error) {
+
+        window[
+          callbackName
+        ] = undefined;
+
+      }
+
+
+      if (
+        script.parentNode
+      ) {
+
+        script.parentNode
+          .removeChild(
+            script
+          );
+
+      }
+
+
+      area.innerHTML = `
+
+        <div class="statistik-title">
+
+          📊 STATUS PERPUSTAKAAN
+
+        </div>
+
 
         <div style="
           padding:15px;
           color:#dc2626;
           text-align:center;
         ">
+
           ❌ Gagal memuat statistik
+
           <br>
+
           <small>
-            ${data && data.message
-              ? data.message
-              : "Data statistik tidak tersedia"}
+
+            API Google Apps Script
+            tidak dapat diakses
+
           </small>
+
         </div>
+
       `;
 
-      return;
-    }
+    };
 
-    area.innerHTML = `
 
-      <div class="statistik-title">
-        📊 STATUS PERPUSTAKAAN
-      </div>
+  document.body.appendChild(
+    script
+  );
 
-      <div class="statistik-grid">
-
-        <div class="statistik-card">
-
-          <div class="statistik-icon">
-            📕
-          </div>
-
-          <div class="statistik-info">
-
-            <div class="statistik-label">
-              Sedang Dipinjam
-            </div>
-
-            <div class="statistik-number">
-              ${Number(data.dipinjam) || 0}
-            </div>
-
-          </div>
-
-        </div>
-
-        <div class="statistik-card">
-
-          <div class="statistik-icon">
-            ✅
-          </div>
-
-          <div class="statistik-info">
-
-            <div class="statistik-label">
-              Dikembalikan
-            </div>
-
-            <div class="statistik-number">
-              ${Number(data.dikembalikan) || 0}
-            </div>
-
-          </div>
-
-        </div>
-
-        <div class="statistik-card">
-
-          <div class="statistik-icon">
-            ⚠️
-          </div>
-
-          <div class="statistik-info">
-
-            <div class="statistik-label">
-              Terlambat
-            </div>
-
-            <div class="statistik-number">
-              ${Number(data.terlambat) || 0}
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-    `;
-  };
-
-  script.onerror = function() {
-
-    if (selesai) {
-      return;
-    }
-
-    if (script.parentNode) {
-      script.parentNode.removeChild(script);
-    }
-
-    try {
-      delete window[callbackName];
-    } catch (e) {
-      window[callbackName] = undefined;
-    }
-
-    area.innerHTML = `
-      <div class="statistik-title">
-        📊 STATUS PERPUSTAKAAN
-      </div>
-
-      <div style="
-        padding:15px;
-        color:#dc2626;
-        text-align:center;
-      ">
-        ❌ Gagal memuat statistik
-        <br>
-        <small>
-          API Google Apps Script tidak dapat diakses
-        </small>
-      </div>
-    `;
-  };
-
-  document.body.appendChild(script);
 }
 
 
