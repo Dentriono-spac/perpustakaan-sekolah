@@ -146,6 +146,26 @@ function mulaiScanSiswa() {
   stopScanner();
 
 
+  const reader =
+    document.getElementById(
+      "readerSiswa"
+    );
+
+
+  if (!reader) {
+
+    alert(
+      "Area scanner siswa tidak ditemukan."
+    );
+
+    return;
+
+  }
+
+
+  reader.innerHTML = "";
+
+
   scannerAktif =
     new Html5Qrcode(
       "readerSiswa"
@@ -170,16 +190,25 @@ function mulaiScanSiswa() {
 
     function(decodedText) {
 
+      console.log(
+        "QR SISWA TERBACA:",
+        decodedText
+      );
+
+
       stopScanner();
 
-      cariSiswaAPI(decodedText);
+
+      cariSiswaAPI(
+        decodedText.trim()
+      );
 
     },
 
 
     function(errorMessage) {
 
-      // QR belum ditemukan
+      // Tidak perlu ditampilkan
 
     }
 
@@ -187,8 +216,14 @@ function mulaiScanSiswa() {
 
   .catch(function(error) {
 
+    console.error(
+      "ERROR KAMERA SISWA:",
+      error
+    );
+
+
     alert(
-      "Kamera tidak dapat dibuka: " +
+      "Kamera siswa tidak dapat dibuka.\n\n" +
       error
     );
 
@@ -198,7 +233,8 @@ function mulaiScanSiswa() {
 
 
 /*************************************************
- * CARI SISWA - JSONP
+ * CARI SISWA
+ * MENGGUNAKAN JSONP
  *************************************************/
 
 function cariSiswaAPI(idSiswa) {
@@ -212,7 +248,8 @@ function cariSiswaAPI(idSiswa) {
 
 
   const callbackName =
-    "__cariSiswa_" + Date.now();
+    "__cariSiswa_" +
+    Date.now();
 
 
   const script =
@@ -225,40 +262,56 @@ function cariSiswaAPI(idSiswa) {
     "&idSiswa=" +
     encodeURIComponent(idSiswa) +
     "&callback=" +
-    encodeURIComponent(callbackName);
+    callbackName;
 
 
   window[callbackName] =
     function(data) {
 
+      console.log(
+        "HASIL CARI SISWA:",
+        data
+      );
+
+
       // Hapus callback
       try {
-        delete window[callbackName];
+
+        delete window[
+          callbackName
+        ];
+
       } catch (e) {
-        window[callbackName] = undefined;
+
+        window[
+          callbackName
+        ] = undefined;
+
       }
 
 
       // Hapus script
       if (script.parentNode) {
-        script.parentNode.removeChild(script);
+
+        script.parentNode
+          .removeChild(script);
+
       }
-
-
-      console.log(
-        "Hasil scan siswa:",
-        data
-      );
 
 
       if (!data) {
 
         siswaAktif = null;
 
+
         area.innerHTML = `
+
           <div class="error">
-            Data siswa tidak ditemukan.
+
+            Data siswa kosong.
+
           </div>
+
         `;
 
         return;
@@ -266,7 +319,7 @@ function cariSiswaAPI(idSiswa) {
       }
 
 
-      if (data.found) {
+      if (data.found === true) {
 
         siswaAktif = data;
 
@@ -279,17 +332,17 @@ function cariSiswaAPI(idSiswa) {
 
             <br><br>
 
-            Nama:
+            <b>Nama:</b>
             ${data.nama_siswa}
 
             <br>
 
-            Kelas:
+            <b>Kelas:</b>
             ${data.kelas}
 
             <br>
 
-            ID:
+            <b>ID:</b>
             ${data.id_siswa}
 
           </div>
@@ -307,7 +360,7 @@ function cariSiswaAPI(idSiswa) {
 
           <div class="error">
 
-            ${data.message || "Siswa tidak ditemukan"}
+            ❌ ${data.message || "Data siswa tidak ditemukan"}
 
           </div>
 
@@ -321,15 +374,31 @@ function cariSiswaAPI(idSiswa) {
   script.onerror =
     function() {
 
+      console.error(
+        "JSONP CARI SISWA GAGAL"
+      );
+
+
       try {
-        delete window[callbackName];
+
+        delete window[
+          callbackName
+        ];
+
       } catch (e) {
-        window[callbackName] = undefined;
+
+        window[
+          callbackName
+        ] = undefined;
+
       }
 
 
       if (script.parentNode) {
-        script.parentNode.removeChild(script);
+
+        script.parentNode
+          .removeChild(script);
+
       }
 
 
@@ -340,12 +409,13 @@ function cariSiswaAPI(idSiswa) {
 
         <div class="error">
 
-          ❌ Gagal terhubung ke server
+          ❌ Google Apps Script tidak dapat diakses.
 
-          <br>
+          <br><br>
 
           <small>
-            Google Apps Script tidak dapat diakses.
+            Pastikan Web App sudah di-deploy
+            sebagai "Anyone".
           </small>
 
         </div>
@@ -355,7 +425,9 @@ function cariSiswaAPI(idSiswa) {
     };
 
 
-  document.body.appendChild(script);
+  document.body.appendChild(
+    script
+  );
 
 }
 
@@ -366,6 +438,26 @@ function cariSiswaAPI(idSiswa) {
 function mulaiScanBuku() {
 
   stopScanner();
+
+
+  const reader =
+    document.getElementById(
+      "readerBuku"
+    );
+
+
+  if (!reader) {
+
+    alert(
+      "Area scanner buku tidak ditemukan."
+    );
+
+    return;
+
+  }
+
+
+  reader.innerHTML = "";
 
 
   scannerAktif =
@@ -392,21 +484,40 @@ function mulaiScanBuku() {
 
     function(decodedText) {
 
+      console.log(
+        "QR BUKU TERBACA:",
+        decodedText
+      );
+
+
       stopScanner();
 
-      cariBukuAPI(decodedText);
+
+      cariBukuAPI(
+        decodedText.trim()
+      );
 
     },
 
 
-    function(errorMessage) {}
+    function(errorMessage) {
+
+      // Tidak perlu ditampilkan
+
+    }
 
   )
 
   .catch(function(error) {
 
+    console.error(
+      "ERROR KAMERA BUKU:",
+      error
+    );
+
+
     alert(
-      "Kamera tidak dapat dibuka: " +
+      "Kamera buku tidak dapat dibuka.\n\n" +
       error
     );
 
@@ -416,7 +527,8 @@ function mulaiScanBuku() {
 
 
 /*************************************************
- * CARI BUKU - JSONP
+ * CARI BUKU
+ * MENGGUNAKAN JSONP
  *************************************************/
 
 function cariBukuAPI(idBuku) {
@@ -430,7 +542,8 @@ function cariBukuAPI(idBuku) {
 
 
   const callbackName =
-    "__cariBuku_" + Date.now();
+    "__cariBuku_" +
+    Date.now();
 
 
   const script =
@@ -443,39 +556,51 @@ function cariBukuAPI(idBuku) {
     "&idBuku=" +
     encodeURIComponent(idBuku) +
     "&callback=" +
-    encodeURIComponent(callbackName);
+    callbackName;
 
 
   window[callbackName] =
     function(data) {
 
+      console.log(
+        "HASIL CARI BUKU:",
+        data
+      );
+
+
       try {
-        delete window[callbackName];
+
+        delete window[
+          callbackName
+        ];
+
       } catch (e) {
-        window[callbackName] = undefined;
+
+        window[
+          callbackName
+        ] = undefined;
+
       }
 
 
       if (script.parentNode) {
-        script.parentNode.removeChild(script);
+
+        script.parentNode
+          .removeChild(script);
+
       }
-
-
-      console.log(
-        "Hasil scan buku:",
-        data
-      );
 
 
       if (!data) {
 
         bukuAktif = null;
 
+
         area.innerHTML = `
 
           <div class="error">
 
-            Data buku tidak ditemukan.
+            Data buku kosong.
 
           </div>
 
@@ -486,7 +611,7 @@ function cariBukuAPI(idBuku) {
       }
 
 
-      if (data.found) {
+      if (data.found === true) {
 
         bukuAktif = data;
 
@@ -499,17 +624,32 @@ function cariBukuAPI(idBuku) {
 
             <br><br>
 
-            Judul:
+            <b>Judul:</b>
             ${data.judul_buku}
 
             <br>
 
-            Penulis:
+            <b>Penulis:</b>
             ${data.penulis}
 
             <br>
 
-            Stok:
+            <b>Penerbit:</b>
+            ${data.penerbit}
+
+            <br>
+
+            <b>Kategori:</b>
+            ${data.kategori}
+
+            <br>
+
+            <b>Tahun:</b>
+            ${data.tahun}
+
+            <br>
+
+            <b>Stok:</b>
             ${data.stok}
 
           </div>
@@ -527,7 +667,7 @@ function cariBukuAPI(idBuku) {
 
           <div class="error">
 
-            ${data.message || "Buku tidak ditemukan"}
+            ❌ ${data.message || "Data buku tidak ditemukan"}
 
           </div>
 
@@ -541,15 +681,31 @@ function cariBukuAPI(idBuku) {
   script.onerror =
     function() {
 
+      console.error(
+        "JSONP CARI BUKU GAGAL"
+      );
+
+
       try {
-        delete window[callbackName];
+
+        delete window[
+          callbackName
+        ];
+
       } catch (e) {
-        window[callbackName] = undefined;
+
+        window[
+          callbackName
+        ] = undefined;
+
       }
 
 
       if (script.parentNode) {
-        script.parentNode.removeChild(script);
+
+        script.parentNode
+          .removeChild(script);
+
       }
 
 
@@ -560,12 +716,13 @@ function cariBukuAPI(idBuku) {
 
         <div class="error">
 
-          ❌ Gagal terhubung ke server
+          ❌ Google Apps Script tidak dapat diakses.
 
-          <br>
+          <br><br>
 
           <small>
-            Google Apps Script tidak dapat diakses.
+            Pastikan Web App sudah di-deploy
+            sebagai "Anyone".
           </small>
 
         </div>
@@ -575,7 +732,9 @@ function cariBukuAPI(idBuku) {
     };
 
 
-  document.body.appendChild(script);
+  document.body.appendChild(
+    script
+  );
 
 }
 
