@@ -16,69 +16,95 @@ let bukuAktif = null;
 
 let scannerAktif = null;
 
-
 /*************************************************
  * PINDAH MENU
  *************************************************/
 
 function bukaMenu(namaMenu) {
 
-  document
-    .getElementById("menuUtama")
-    .classList
-    .add("hidden");
+  // Sembunyikan menu utama
+  const menuUtama =
+    document.getElementById("menuUtama");
+
+  if (menuUtama) {
+    menuUtama.classList.add("hidden");
+  }
 
 
+  // Sembunyikan STATUS PERPUSTAKAAN
+  const statistik =
+    document.getElementById("statistik");
+
+  if (statistik) {
+    statistik.classList.add("hidden");
+  }
+
+
+  // Sembunyikan semua halaman
   const halaman =
     document.querySelectorAll(".halaman");
 
-
   halaman.forEach(function(item) {
-
     item.classList.add("hidden");
-
   });
 
 
-  document
-    .getElementById(namaMenu)
-    .classList
-    .remove("hidden");
+  // Tampilkan halaman yang dipilih
+  const halamanAktif =
+    document.getElementById(namaMenu);
+
+  if (halamanAktif) {
+    halamanAktif.classList.remove("hidden");
+  }
 
 
+  // Jika membuka keterlambatan,
+  // langsung ambil datanya
   if (namaMenu === "terlambat") {
-
     loadKeterlambatan();
-
   }
 
 }
 
-
 /*************************************************
- * KEMBALI KE MENU
+ * KEMBALI KE MENU UTAMA
  *************************************************/
 
 function kembaliMenu() {
 
+  // Matikan scanner jika sedang aktif
   stopScanner();
 
 
+  // Sembunyikan semua halaman
   const halaman =
     document.querySelectorAll(".halaman");
 
-
   halaman.forEach(function(item) {
-
     item.classList.add("hidden");
-
   });
 
 
-  document
-    .getElementById("menuUtama")
-    .classList
-    .remove("hidden");
+  // Tampilkan menu utama
+  const menuUtama =
+    document.getElementById("menuUtama");
+
+  if (menuUtama) {
+    menuUtama.classList.remove("hidden");
+  }
+
+
+  // Tampilkan kembali STATUS PERPUSTAKAAN
+  const statistik =
+    document.getElementById("statistik");
+
+  if (statistik) {
+    statistik.classList.remove("hidden");
+  }
+
+
+  // Perbarui statistik
+  loadStatistik();
 
 }
 
