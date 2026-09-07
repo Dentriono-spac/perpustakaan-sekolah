@@ -241,3 +241,8 @@ input {
   background-color: #ffffff !important;
   -webkit-text-fill-color: #1e293b !important;
 }
+
+#menuUtama button span {
+  color: #1e293b !important;
+  -webkit-text-fill-color: #1e293b !important;
+}
