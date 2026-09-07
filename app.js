@@ -1049,3 +1049,129 @@ async function loadKeterlambatan() {
   }
 
 }
+
+/*************************************************
+ * STATISTIK PERPUSTAKAAN
+ *************************************************/
+
+async function loadStatistik() {
+
+  const area = document.getElementById("statistik");
+
+  if (!area) {
+    console.warn("Elemen #statistik tidak ditemukan.");
+    return;
+  }
+
+  area.innerHTML = `
+    <div class="statistik-title">
+      📊 STATUS PERPUSTAKAAN
+    </div>
+    <div class="statistik-loading">
+      Memuat statistik...
+    </div>
+  `;
+
+  try {
+
+    const response = await fetch(
+      API_URL + "?action=statistik"
+    );
+
+    const data = await response.json();
+
+    if (!data || data.success === false) {
+      throw new Error(
+        data && data.message
+          ? data.message
+          : "Statistik tidak dapat dimuat"
+      );
+    }
+
+    area.innerHTML = `
+
+      <div class="statistik-title">
+        📊 STATUS PERPUSTAKAAN
+      </div>
+
+      <div class="statistik-grid">
+
+        <div class="statistik-card">
+          <div class="statistik-icon">📕</div>
+
+          <div class="statistik-info">
+            <div class="statistik-label">
+              Sedang Dipinjam
+            </div>
+
+            <div class="statistik-number">
+              ${Number(data.dipinjam) || 0}
+            </div>
+          </div>
+        </div>
+
+
+        <div class="statistik-card">
+          <div class="statistik-icon">✅</div>
+
+          <div class="statistik-info">
+            <div class="statistik-label">
+              Dikembalikan
+            </div>
+
+            <div class="statistik-number">
+              ${Number(data.dikembalikan) || 0}
+            </div>
+          </div>
+        </div>
+
+
+        <div class="statistik-card">
+          <div class="statistik-icon">⚠️</div>
+
+          <div class="statistik-info">
+            <div class="statistik-label">
+              Terlambat
+            </div>
+
+            <div class="statistik-number">
+              ${Number(data.terlambat) || 0}
+            </div>
+          </div>
+        </div>
+
+      </div>
+    `;
+
+  } catch (error) {
+
+    console.error(
+      "Gagal memuat statistik:",
+      error
+    );
+
+    area.innerHTML = `
+      <div class="statistik-title">
+        📊 STATUS PERPUSTAKAAN
+      </div>
+
+      <div class="error">
+        Statistik belum dapat dimuat
+      </div>
+    `;
+  }
+}
+
+
+/*************************************************
+ * LOAD STATISTIK SAAT HALAMAN DIBUKA
+ *************************************************/
+
+document.addEventListener(
+  "DOMContentLoaded",
+  function() {
+
+    loadStatistik();
+
+  }
+);
