@@ -1,498 +1,124 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
-
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Perpustakaan Digital Sekolah</title>
-
-  <link
-    rel="stylesheet"
-    href="style.css?v=6"
-  >
-
-  <!-- QR SCANNER -->
+  <link rel="stylesheet" href="style.css?v=7">
   <script src="https://unpkg.com/html5-qrcode"></script>
-
 </head>
-
-
 <body>
 
-
-<!-- =====================================================
-     HEADER
-===================================================== -->
-
 <header class="header">
-
   <h1>📚 PERPUSTAKAAN</h1>
-
-  <p>
-    Sistem Perpustakaan Digital Sekolah
-  </p>
-
+  <p>Sistem Perpustakaan Digital Sekolah</p>
 </header>
 
-
-
-<!-- =====================================================
-     MENU UTAMA
-===================================================== -->
-
-<section
-  id="menuUtama"
-  class="halaman"
->
-
-  <button
-    class="menu-btn"
-    onclick="bukaMenu('pinjam')"
-  >
-    📚 Pinjam Buku
-  </button>
-
-
-  <button
-    class="menu-btn"
-    onclick="bukaMenu('pengembalian')"
-  >
-    ↩️ Kembalikan Buku
-  </button>
-
-
-  <button
-    class="menu-btn"
-    onclick="bukaMenu('pinjaman')"
-  >
-    📖 Buku Dipinjam
-  </button>
-
-
-  <button
-    class="menu-btn"
-    onclick="bukaMenu('keterlambatan')"
-  >
-    ⚠️ Keterlambatan
-  </button>
-
-
-  <!-- =================================================
-       STATISTIK
-       TIDAK ADA KAMERA DI SINI
-  ================================================== -->
+<section id="menuUtama" class="halaman">
+  <button class="menu-btn" onclick="bukaMenu('pinjam')">📚 Pinjam Buku</button>
+  <button class="menu-btn" onclick="bukaMenu('pengembalian')">↩️ Kembalikan Buku</button>
+  <button class="menu-btn" onclick="bukaMenu('pinjaman')">📖 Buku Dipinjam</button>
+  <button class="menu-btn" onclick="bukaMenu('keterlambatan')">⚠️ Keterlambatan</button>
 
   <div class="statistik-container">
-
     <h3>📊 STATUS PERPUSTAKAAN</h3>
-
-    <div
-      id="statistikLoading"
-      class="statistik-loading"
-    >
-      ⏳ Memuat statistik...
+    <div id="statistikLoading" class="statistik-loading">⏳ Memuat statistik...</div>
+    <div id="statistikError" class="statistik-error" style="display:none;">
+      ❌ Gagal memuat statistik<br>
+      <small id="statistikErrorText">Google Apps Script tidak dapat diakses.</small>
     </div>
-
-
-    <div
-      id="statistikError"
-      class="statistik-error"
-      style="display:none;"
-    >
-      ❌ Gagal memuat statistik
-      <br>
-      <small>
-        Google Apps Script tidak dapat diakses.
-      </small>
+    <div id="statistikData" class="statistik-grid" style="display:none;">
+      <div class="stat-box">
+        <div class="stat-icon">📚</div>
+        <div class="stat-label">Sedang Dipinjam</div>
+        <div id="statDipinjam" class="stat-number">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-icon">↩️</div>
+        <div class="stat-label">Sudah Dikembalikan</div>
+        <div id="statDikembalikan" class="stat-number">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-label">Terlambat</div>
+        <div id="statTerlambat" class="stat-number">0</div>
+      </div>
     </div>
-
-
-    <div
-      id="statistikData"
-      class="statistik-grid"
-      style="display:none;"
-    >
-
-      <div class="stat-box">
-
-        <div class="stat-icon">
-          📚
-        </div>
-
-        <div class="stat-label">
-          Sedang Dipinjam
-        </div>
-
-        <div
-          id="statDipinjam"
-          class="stat-number"
-        >
-          0
-        </div>
-
-      </div>
-
-
-      <div class="stat-box">
-
-        <div class="stat-icon">
-          ↩️
-        </div>
-
-        <div class="stat-label">
-          Sudah Dikembalikan
-        </div>
-
-        <div
-          id="statDikembalikan"
-          class="stat-number"
-        >
-          0
-        </div>
-
-      </div>
-
-
-      <div class="stat-box">
-
-        <div class="stat-icon">
-          ⚠️
-        </div>
-
-        <div class="stat-label">
-          Terlambat
-        </div>
-
-        <div
-          id="statTerlambat"
-          class="stat-number"
-        >
-          0
-        </div>
-
-      </div>
-
-    </div>
-
   </div>
-
 </section>
 
-
-
-<!-- =====================================================
-     PINJAM BUKU
-===================================================== -->
-
-<section
-  id="pinjam"
-  class="halaman hidden"
->
-
-  <button
-    class="btn-kembali"
-    onclick="kembaliMenu()"
-  >
-    ← Kembali
-  </button>
-
-
+<section id="pinjam" class="halaman hidden">
+  <button class="btn-kembali" onclick="kembaliMenu()">← Kembali</button>
   <h2>📚 PINJAM BUKU</h2>
 
-
-  <!-- SISWA -->
-
   <div class="card">
-
     <h3>👨‍🎓 Siswa</h3>
-
-
     <div class="search-row">
-
-      <input
-        type="text"
-        id="inputSiswaPinjam"
-        placeholder="ID Siswa"
-      >
-
-
-      <button
-        class="btn-camera"
-        onclick="mulaiScanSiswaPinjam()"
-      >
-        📷
-      </button>
-
-
-      <button
-        class="btn-cari"
-        onclick="cariSiswaPinjamManual()"
-      >
-        CARI
-      </button>
-
+      <input type="text" id="inputSiswaPinjam" placeholder="ID Siswa" autocomplete="off">
+      <button class="btn-camera" onclick="mulaiScanSiswaPinjam()">📷</button>
+      <button class="btn-cari" onclick="cariSiswaPinjamManual()">CARI</button>
     </div>
-
-
-    <div
-      id="readerSiswaPinjam"
-      class="scanner"
-    ></div>
-
-
-    <div
-      id="hasilSiswaPinjam"
-    ></div>
-
+    <div id="readerSiswaPinjam" class="scanner"></div>
+    <div id="hasilSiswaPinjam"></div>
   </div>
 
-
-
-  <!-- BUKU -->
-
   <div class="card">
-
     <h3>📖 Buku</h3>
-
-
     <div class="search-row">
-
-      <input
-        type="text"
-        id="inputBukuPinjam"
-        placeholder="ID Buku"
-      >
-
-
-      <button
-        class="btn-camera"
-        onclick="mulaiScanBukuPinjam()"
-      >
-        📷
-      </button>
-
-
-      <button
-        class="btn-cari"
-        onclick="cariBukuPinjamManual()"
-      >
-        CARI
-      </button>
-
+      <input type="text" id="inputBukuPinjam" placeholder="ID Buku" autocomplete="off">
+      <button class="btn-camera" onclick="mulaiScanBukuPinjam()">📷</button>
+      <button class="btn-cari" onclick="cariBukuPinjamManual()">CARI</button>
     </div>
-
-
-    <div
-      id="readerBukuPinjam"
-      class="scanner"
-    ></div>
-
-
-    <div
-      id="hasilBukuPinjam"
-    ></div>
-
+    <div id="readerBukuPinjam" class="scanner"></div>
+    <div id="hasilBukuPinjam"></div>
   </div>
-
-
 
   <div class="card">
-
-    <button
-      class="btn-proses"
-      onclick="prosesPinjam()"
-    >
-      📚 PINJAM BUKU
-    </button>
-
+    <button class="btn-proses" onclick="prosesPinjam()">📚 PINJAM BUKU</button>
   </div>
-
+  <div id="hasilPinjam"></div>
 </section>
 
-
-
-<!-- =====================================================
-     KEMBALIKAN BUKU
-===================================================== -->
-
-<section
-  id="pengembalian"
-  class="halaman hidden"
->
-
-  <button
-    class="btn-kembali"
-    onclick="kembaliMenu()"
-  >
-    ← Kembali
-  </button>
-
-
+<section id="pengembalian" class="halaman hidden">
+  <button class="btn-kembali" onclick="kembaliMenu()">← Kembali</button>
   <h2>↩️ KEMBALIKAN BUKU</h2>
 
-
   <div class="card">
-
     <h3>👨‍🎓 Cari Siswa</h3>
-
-
     <div class="search-row">
-
-      <input
-        type="text"
-        id="inputCariPengembalian"
-        placeholder="ID Siswa"
-      >
-
-
-      <button
-        class="btn-camera"
-        onclick="mulaiScanPengembalian()"
-      >
-        📷
-      </button>
-
-
-      <button
-        class="btn-cari"
-        onclick="cariPengembalianManual()"
-      >
-        CARI
-      </button>
-
+      <input type="text" id="inputCariPengembalian" placeholder="ID Siswa" autocomplete="off">
+      <button class="btn-camera" onclick="mulaiScanPengembalian()">📷</button>
+      <button class="btn-cari" onclick="cariPengembalianManual()">CARI</button>
     </div>
-
-
-    <div
-      id="readerKembali"
-      class="scanner"
-    ></div>
-
-
-    <div
-      id="dataPengembalian"
-    ></div>
-
+    <div id="readerKembali" class="scanner"></div>
+    <div id="dataPengembalian"></div>
   </div>
-
 </section>
 
-
-
-<!-- =====================================================
-     BUKU DIPINJAM
-===================================================== -->
-
-<section
-  id="pinjaman"
-  class="halaman hidden"
->
-
-  <button
-    class="btn-kembali"
-    onclick="kembaliMenu()"
-  >
-    ← Kembali
-  </button>
-
-
+<section id="pinjaman" class="halaman hidden">
+  <button class="btn-kembali" onclick="kembaliMenu()">← Kembali</button>
   <h2>📖 BUKU YANG DIPINJAM</h2>
 
-
   <div class="card">
-
     <h3>👨‍🎓 Cari Siswa</h3>
-
-
     <div class="search-row">
-
-      <input
-        type="text"
-        id="inputCariSiswa"
-        placeholder="ID Siswa"
-      >
-
-
-      <button
-        class="btn-camera"
-        onclick="mulaiScanPinjaman()"
-      >
-        📷
-      </button>
-
-
-      <button
-        class="btn-cari"
-        onclick="cariPinjamanManual()"
-      >
-        CARI
-      </button>
-
+      <input type="text" id="inputCariSiswa" placeholder="ID Siswa" autocomplete="off">
+      <button class="btn-camera" onclick="mulaiScanPinjaman()">📷</button>
+      <button class="btn-cari" onclick="cariPinjamanManual()">CARI</button>
     </div>
-
-
-    <div
-      id="readerPinjaman"
-      class="scanner"
-    ></div>
-
-
-    <div
-      id="hasilPinjaman"
-    ></div>
-
+    <div id="readerPinjaman" class="scanner"></div>
+    <div id="hasilPinjaman"></div>
   </div>
-
 </section>
 
-
-
-<!-- =====================================================
-     KETERLAMBATAN
-===================================================== -->
-
-<section
-  id="keterlambatan"
-  class="halaman hidden"
->
-
-  <button
-    class="btn-kembali"
-    onclick="kembaliMenu()"
-  >
-    ← Kembali
-  </button>
-
-
+<section id="keterlambatan" class="halaman hidden">
+  <button class="btn-kembali" onclick="kembaliMenu()">← Kembali</button>
   <h2>⚠️ KETERLAMBATAN</h2>
-
-
-  <div
-    id="dataKeterlambatan"
-  >
-
-    <p>
-      ⏳ Memuat data keterlambatan...
-    </p>
-
+  <div id="dataKeterlambatan">
+    <p>⏳ Memuat data keterlambatan...</p>
   </div>
-
 </section>
 
-
-
-<!-- =====================================================
-     JAVASCRIPT
-===================================================== -->
-
-<script src="app.js?v=8"></script>
-
+<script src="app.js?v=7"></script>
 </body>
-
 </html>
