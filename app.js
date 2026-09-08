@@ -1235,30 +1235,31 @@ function bukaScanner(readerId, onSuccess) {
 
   stopScanner();
 
-
   const reader =
-    document.getElementById(
-      readerId
-    );
+    document.getElementById(readerId);
 
   if (!reader) {
-
-    alert(
-      "Area kamera tidak ditemukan."
-    );
-
+    alert("Area kamera tidak ditemukan.");
     return;
   }
 
+  // ==========================================
+  // PAKSA AREA KAMERA TERLIHAT
+  // ==========================================
+  reader.style.display = "block";
+  reader.style.visibility = "visible";
+  reader.style.width = "100%";
+  reader.style.minHeight = "300px";
+  reader.style.marginTop = "15px";
+  reader.style.overflow = "hidden";
 
   reader.innerHTML = "";
 
-
+  // ==========================================
+  // BUAT SCANNER
+  // ==========================================
   scannerAktif =
-    new Html5Qrcode(
-      readerId
-    );
-
+    new Html5Qrcode(readerId);
 
   scannerAktif.start(
 
@@ -1272,20 +1273,30 @@ function bukaScanner(readerId, onSuccess) {
       qrbox: {
         width: 250,
         height: 250
-      }
+      },
+
+      aspectRatio: 1.0
     },
 
     function(decodedText) {
 
+      // QR berhasil dibaca
       onSuccess(decodedText);
 
     },
 
-    function() {}
+    function(errorMessage) {
+      // Tidak perlu melakukan apa-apa
+    }
 
   ).catch(function(error) {
 
-    console.error(error);
+    console.error(
+      "Gagal membuka kamera:",
+      error
+    );
+
+    reader.style.display = "none";
 
     alert(
       "Kamera tidak dapat dibuka. Pastikan izin kamera diberikan."
@@ -1296,21 +1307,26 @@ function bukaScanner(readerId, onSuccess) {
   });
 }
 
-
 /************************************************************
  * STOP SCANNER
  ************************************************************/
 
 function stopScanner() {
 
-  if (!scannerAktif) return;
+  if (!scannerAktif) {
 
+    // Sembunyikan semua area scanner
+    document.querySelectorAll(".scanner").forEach(function(el) {
+      el.style.display = "none";
+    });
+
+    return;
+  }
 
   const scanner =
     scannerAktif;
 
   scannerAktif = null;
-
 
   scanner.stop()
 
@@ -1319,6 +1335,10 @@ function stopScanner() {
       try {
         scanner.clear();
       } catch (e) {}
+
+      document.querySelectorAll(".scanner").forEach(function(el) {
+        el.style.display = "none";
+      });
 
     })
 
@@ -1332,6 +1352,10 @@ function stopScanner() {
       try {
         scanner.clear();
       } catch (e) {}
+
+      document.querySelectorAll(".scanner").forEach(function(el) {
+        el.style.display = "none";
+      });
 
     });
 }
