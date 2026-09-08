@@ -1,2058 +1,17 @@
-/*************************************************
- * KONFIGURASI API
- *************************************************/
+/************************************************************
+ * KONFIGURASI
+ ************************************************************/
 
 const API_URL =
   "https://script.google.com/macros/s/AKfycbyk367Q4T6gyUN2Xptxi9PPYaOfNXjvTSaWqHRxH2uqNNgEynfRgpBAeHg8HFnyr8UOHw/exec";
 
 
-/*************************************************
- * DATA SEMENTARA
- *************************************************/
-
-let siswaAktif = null;
-let bukuAktif = null;
 let scannerAktif = null;
 
 
-/*************************************************
- * JSONP HELPER
- *************************************************/
-
-function panggilJSONP(action, parameter, callbackSelesai) {
-
-  const callbackName =
-    "__apiCallback_" +
-    Date.now() +
-    "_" +
-    Math.floor(Math.random() * 100000);
-
-  const script =
-    document.createElement("script");
-
-  let selesai = false;
-
-  let query =
-    "?action=" +
-    encodeURIComponent(action) +
-    "&callback=" +
-    encodeURIComponent(callbackName);
-
-  if (parameter) {
-
-    Object.keys(parameter).forEach(function(key) {
-
-      query +=
-        "&" +
-        encodeURIComponent(key) +
-        "=" +
-        encodeURIComponent(
-          parameter[key] == null
-            ? ""
-            : parameter[key]
-        );
-
-    });
-
-  }
-
-  function bersihkan() {
-
-    try {
-      delete window[callbackName];
-    } catch (e) {
-      window[callbackName] = undefined;
-    }
-
-    if (script.parentNode) {
-      script.parentNode.removeChild(script);
-    }
-
-  }
-
-  window[callbackName] =
-    function(data) {
-
-      if (selesai) {
-        return;
-      }
-
-      selesai = true;
-
-      bersihkan();
-
-      callbackSelesai(null, data);
-
-    };
-
-
-  script.onerror =
-    function() {
-
-      if (selesai) {
-        return;
-      }
-
-      selesai = true;
-
-      bersihkan();
-
-      callbackSelesai(
-        new Error(
-          "Google Apps Script tidak dapat diakses."
-        ),
-        null
-      );
-
-    };
-
-
-  script.src =
-    API_URL + query;
-
-  script.async = true;
-
-  document.body.appendChild(script);
-
-
-  /*
-   * Timeout 15 detik.
-   * Kalau server tidak membalas,
-   * tampilkan error dengan jelas.
-   */
-
-  setTimeout(function() {
-
-    if (selesai) {
-      return;
-    }
-
-    selesai = true;
-
-    bersihkan();
-
-    callbackSelesai(
-      new Error(
-        "Server tidak merespons dalam 15 detik."
-      ),
-      null
-    );
-
-  }, 15000);
-
-}
-
-
-/*************************************************
- * PINDAH MENU
- *************************************************/
-
-function bukaMenu(namaMenu) {
-
-  const menuUtama =
-    document.getElementById("menuUtama");
-
-  if (menuUtama) {
-    menuUtama.classList.add("hidden");
-  }
-
-
-  const statistik =
-    document.getElementById("statistik");
-
-  if (statistik) {
-    statistik.classList.add("hidden");
-  }
-
-
-  const halaman =
-    document.querySelectorAll(".halaman");
-
-  halaman.forEach(function(item) {
-    item.classList.add("hidden");
-  });
-
-
-  const halamanAktif =
-    document.getElementById(namaMenu);
-
-  if (halamanAktif) {
-    halamanAktif.classList.remove("hidden");
-  }
-
-
-  if (namaMenu === "terlambat") {
-    loadKeterlambatan();
-  }
-
-}
-
-
-/*************************************************
- * KEMBALI KE MENU UTAMA
- *************************************************/
-
-function kembaliMenu() {
-
-  stopScanner();
-
-
-  const halaman =
-    document.querySelectorAll(".halaman");
-
-  halaman.forEach(function(item) {
-    item.classList.add("hidden");
-  });
-
-
-  const menuUtama =
-    document.getElementById("menuUtama");
-
-  if (menuUtama) {
-    menuUtama.classList.remove("hidden");
-  }
-
-
-  const statistik =
-    document.getElementById("statistik");
-
-  if (statistik) {
-    statistik.classList.remove("hidden");
-  }
-
-
-  loadStatistik();
-
-}
-
-
-/*************************************************
- * STOP SCANNER
- *************************************************/
-
-function stopScanner() {
-
-  if (!scannerAktif) {
-    return;
-  }
-
-  const scanner =
-    scannerAktif;
-
-  scannerAktif = null;
-
-
-  try {
-
-    scanner.stop()
-      .then(function() {
-
-        console.log("Scanner dihentikan.");
-
-      })
-      .catch(function(error) {
-
-        console.log(
-          "Scanner sudah berhenti:",
-          error
-        );
-
-      });
-
-  }
-
-  catch(error) {
-
-    console.log(
-      "Gagal menghentikan scanner:",
-      error
-    );
-
-  }
-
-}
-
-
-/*************************************************
- * SCAN SISWA
- *************************************************/
-
-function mulaiScanSiswa() {
-
-  stopScanner();
-
-
-  const reader =
-    document.getElementById("readerSiswa");
-
-
-  if (!reader) {
-
-    alert(
-      "Area scanner siswa tidak ditemukan."
-    );
-
-    return;
-
-  }
-
-
-  reader.innerHTML = "";
-
-
-  if (typeof Html5Qrcode === "undefined") {
-
-    alert(
-      "Library scanner belum dimuat."
-    );
-
-    return;
-
-  }
-
-
-  const scanner =
-    new Html5Qrcode("readerSiswa");
-
-  scannerAktif = scanner;
-
-
-  scanner.start(
-
-    {
-      facingMode: "environment"
-    },
-
-    {
-      fps: 10,
-
-      qrbox: {
-        width: 250,
-        height: 250
-      }
-    },
-
-
-    function(decodedText) {
-
-      const idSiswa =
-        String(decodedText || "").trim();
-
-
-      console.log(
-        "QR SISWA TERBACA:",
-        idSiswa
-      );
-
-
-      if (!idSiswa) {
-        return;
-      }
-
-
-      stopScanner();
-
-
-      cariSiswaAPI(idSiswa);
-
-    },
-
-
-    function(errorMessage) {
-
-      // Abaikan error scan sementara
-
-    }
-
-  )
-
-  .catch(function(error) {
-
-    console.error(
-      "ERROR KAMERA SISWA:",
-      error
-    );
-
-
-    scannerAktif = null;
-
-
-    alert(
-      "Kamera siswa tidak dapat dibuka.\n\n" +
-      error
-    );
-
-  });
-
-}
-
-
-/*************************************************
- * CARI SISWA
- * JSONP
- *************************************************/
-
-function cariSiswaAPI(idSiswa) {
-
-  const area =
-    document.getElementById("dataSiswa");
-
-
-  if (!area) {
-    return;
-  }
-
-
-  idSiswa =
-    String(idSiswa || "").trim();
-
-
-  if (!idSiswa) {
-
-    area.innerHTML = `
-      <div class="error">
-        ID siswa kosong.
-      </div>
-    `;
-
-    return;
-
-  }
-
-
-  area.innerHTML =
-    "🔍 Mencari data siswa...";
-
-
-  siswaAktif = null;
-
-
-  panggilJSONP(
-
-    "cari_siswa",
-
-    {
-      idSiswa: idSiswa
-    },
-
-    function(error, data) {
-
-      console.log(
-        "HASIL CARI SISWA:",
-        error,
-        data
-      );
-
-
-      if (error) {
-
-        area.innerHTML = `
-          <div class="error">
-
-            ❌ Gagal terhubung ke server.
-
-            <br><br>
-
-            <small>
-              ${error.message}
-            </small>
-
-          </div>
-        `;
-
-        return;
-
-      }
-
-
-      if (!data) {
-
-        area.innerHTML = `
-          <div class="error">
-            ❌ Data siswa kosong.
-          </div>
-        `;
-
-        return;
-
-      }
-
-
-      if (data.found === true) {
-
-        siswaAktif = data;
-
-
-        area.innerHTML = `
-
-          <div class="hasil-card">
-
-            <b>✓ DATA SISWA</b>
-
-            <br><br>
-
-            <b>Nama:</b>
-            ${data.nama_siswa || "-"}
-
-            <br>
-
-            <b>Kelas:</b>
-            ${data.kelas || "-"}
-
-            <br>
-
-            <b>ID:</b>
-            ${data.id_siswa || idSiswa}
-
-          </div>
-
-        `;
-
-      }
-
-      else {
-
-        siswaAktif = null;
-
-
-        area.innerHTML = `
-
-          <div class="error">
-
-            ❌ ${
-              data.message ||
-              "Data siswa tidak ditemukan"
-            }
-
-          </div>
-
-        `;
-
-      }
-
-    }
-
-  );
-
-}
-
-
-/*************************************************
- * SCAN BUKU
- *************************************************/
-
-function mulaiScanBuku() {
-
-  stopScanner();
-
-
-  const reader =
-    document.getElementById("readerBuku");
-
-
-  if (!reader) {
-
-    alert(
-      "Area scanner buku tidak ditemukan."
-    );
-
-    return;
-
-  }
-
-
-  reader.innerHTML = "";
-
-
-  if (typeof Html5Qrcode === "undefined") {
-
-    alert(
-      "Library scanner belum dimuat."
-    );
-
-    return;
-
-  }
-
-
-  const scanner =
-    new Html5Qrcode("readerBuku");
-
-  scannerAktif = scanner;
-
-
-  scanner.start(
-
-    {
-      facingMode: "environment"
-    },
-
-    {
-      fps: 10,
-
-      qrbox: {
-        width: 250,
-        height: 250
-      }
-    },
-
-
-    function(decodedText) {
-
-      const idBuku =
-        String(decodedText || "").trim();
-
-
-      console.log(
-        "QR BUKU TERBACA:",
-        idBuku
-      );
-
-
-      if (!idBuku) {
-        return;
-      }
-
-
-      stopScanner();
-
-
-      cariBukuAPI(idBuku);
-
-    },
-
-
-    function(errorMessage) {
-
-      // Abaikan error scan sementara
-
-    }
-
-  )
-
-  .catch(function(error) {
-
-    console.error(
-      "ERROR KAMERA BUKU:",
-      error
-    );
-
-
-    scannerAktif = null;
-
-
-    alert(
-      "Kamera buku tidak dapat dibuka.\n\n" +
-      error
-    );
-
-  });
-
-}
-
-
-/*************************************************
- * CARI BUKU
- * JSONP
- *************************************************/
-
-function cariBukuAPI(idBuku) {
-
-  const area =
-    document.getElementById("dataBuku");
-
-
-  if (!area) {
-    return;
-  }
-
-
-  idBuku =
-    String(idBuku || "").trim();
-
-
-  if (!idBuku) {
-
-    area.innerHTML = `
-      <div class="error">
-        ID buku kosong.
-      </div>
-    `;
-
-    return;
-
-  }
-
-
-  area.innerHTML =
-    "🔍 Mencari data buku...";
-
-
-  bukuAktif = null;
-
-
-  panggilJSONP(
-
-    "cari_buku",
-
-    {
-      idBuku: idBuku
-    },
-
-    function(error, data) {
-
-      console.log(
-        "HASIL CARI BUKU:",
-        error,
-        data
-      );
-
-
-      if (error) {
-
-        area.innerHTML = `
-          <div class="error">
-
-            ❌ Gagal terhubung ke server.
-
-            <br><br>
-
-            <small>
-              ${error.message}
-            </small>
-
-          </div>
-        `;
-
-        return;
-
-      }
-
-
-      if (!data) {
-
-        area.innerHTML = `
-          <div class="error">
-            ❌ Data buku kosong.
-          </div>
-        `;
-
-        return;
-
-      }
-
-
-      if (data.found === true) {
-
-        bukuAktif = data;
-
-
-        area.innerHTML = `
-
-          <div class="hasil-card">
-
-            <b>✓ DATA BUKU</b>
-
-            <br><br>
-
-            <b>Judul:</b>
-            ${data.judul_buku || "-"}
-
-            <br>
-
-            <b>Penulis:</b>
-            ${data.penulis || "-"}
-
-            <br>
-
-            <b>Penerbit:</b>
-            ${data.penerbit || "-"}
-
-            <br>
-
-            <b>Kategori:</b>
-            ${data.kategori || "-"}
-
-            <br>
-
-            <b>Tahun:</b>
-            ${data.tahun || "-"}
-
-            <br>
-
-            <b>Stok:</b>
-            ${data.stok ?? "-"}
-
-          </div>
-
-        `;
-
-      }
-
-      else {
-
-        bukuAktif = null;
-
-
-        area.innerHTML = `
-
-          <div class="error">
-
-            ❌ ${
-              data.message ||
-              "Data buku tidak ditemukan"
-            }
-
-          </div>
-
-        `;
-
-      }
-
-    }
-
-  );
-
-}
-
-
-/*************************************************
- * PROSES PINJAM
- *************************************************/
-
-async function prosesPinjam() {
-
-  const hasil =
-    document.getElementById("hasilPinjam");
-
-
-  if (!hasil) {
-    return;
-  }
-
-
-  if (!siswaAktif) {
-
-    alert(
-      "Silakan scan siswa terlebih dahulu"
-    );
-
-    return;
-
-  }
-
-
-  if (!bukuAktif) {
-
-    alert(
-      "Silakan scan buku terlebih dahulu"
-    );
-
-    return;
-
-  }
-
-
-  hasil.innerHTML =
-    "Memproses peminjaman...";
-
-
-  try {
-
-    const response =
-      await fetch(
-
-        API_URL,
-
-        {
-          method: "POST",
-
-          body:
-            JSON.stringify({
-
-              action: "pinjam_buku",
-
-              idSiswa:
-                siswaAktif.id_siswa,
-
-              idBuku:
-                bukuAktif.id_buku
-
-            })
-
-        }
-
-      );
-
-
-    const data =
-      await response.json();
-
-
-    if (data.success) {
-
-      hasil.innerHTML = `
-
-        <div class="hasil-card success">
-
-          ✓ ${data.message || "Peminjaman berhasil"}
-
-          <br><br>
-
-          Siswa:
-          ${data.nama_siswa || siswaAktif.nama_siswa}
-
-          <br>
-
-          Buku:
-          ${data.judul_buku || bukuAktif.judul_buku}
-
-          <br>
-
-          Batas kembali:
-          ${data.batas_kembali || "-"}
-
-        </div>
-
-      `;
-
-
-      siswaAktif = null;
-      bukuAktif = null;
-
-
-      loadStatistik();
-
-    }
-
-    else {
-
-      hasil.innerHTML = `
-
-        <div class="error">
-
-          ❌ ${
-            data.message ||
-            "Peminjaman gagal"
-          }
-
-        </div>
-
-      `;
-
-    }
-
-  }
-
-  catch(error) {
-
-    console.error(
-      "ERROR PINJAM:",
-      error
-    );
-
-
-    hasil.innerHTML = `
-
-      <div class="error">
-
-        ❌ Gagal memproses peminjaman
-
-        <br><br>
-
-        <small>
-          ${error.message}
-        </small>
-
-      </div>
-
-    `;
-
-  }
-
-}
-
-
-/*************************************************
- * SCAN SISWA UNTUK PENGEMBALIAN
- *************************************************/
-
-function mulaiScanPengembalian() {
-
-  stopScanner();
-
-
-  const reader =
-    document.getElementById("readerKembali");
-
-
-  if (!reader) {
-
-    alert(
-      "Area scanner pengembalian tidak ditemukan."
-    );
-
-    return;
-
-  }
-
-
-  reader.innerHTML = "";
-
-
-  if (typeof Html5Qrcode === "undefined") {
-
-    alert(
-      "Library scanner belum dimuat."
-    );
-
-    return;
-
-  }
-
-
-  const scanner =
-    new Html5Qrcode("readerKembali");
-
-  scannerAktif = scanner;
-
-
-  scanner.start(
-
-    {
-      facingMode: "environment"
-    },
-
-    {
-      fps: 10,
-
-      qrbox: {
-        width: 250,
-        height: 250
-      }
-    },
-
-
-    function(decodedText) {
-
-      const idSiswa =
-        String(decodedText || "").trim();
-
-
-      if (!idSiswa) {
-        return;
-      }
-
-
-      stopScanner();
-
-
-      tampilkanPinjamanSiswa(idSiswa);
-
-    },
-
-
-    function(errorMessage) {}
-
-  )
-
-  .catch(function(error) {
-
-    console.error(
-      "ERROR SCANNER PENGEMBALIAN:",
-      error
-    );
-
-
-    scannerAktif = null;
-
-
-    alert(
-      "Kamera tidak dapat dibuka.\n\n" +
-      error
-    );
-
-  });
-
-}
-
-
-/*************************************************
- * TAMPILKAN PINJAMAN SISWA
- *************************************************/
-
-function tampilkanPinjamanSiswa(idSiswa) {
-
-  const area =
-    document.getElementById(
-      "dataPengembalian"
-    );
-
-
-  if (!area) {
-    return;
-  }
-
-
-  idSiswa =
-    String(idSiswa || "").trim();
-
-
-  area.innerHTML =
-    "🔍 Mencari buku yang dipinjam...";
-
-
-  panggilJSONP(
-
-    "lihat_pinjaman",
-
-    {
-      idSiswa: idSiswa
-    },
-
-    function(error, data) {
-
-      console.log(
-        "PINJAMAN SISWA:",
-        error,
-        data
-      );
-
-
-      if (error) {
-
-        area.innerHTML = `
-
-          <div class="error">
-
-            ❌ Gagal mengambil data pinjaman
-
-            <br><br>
-
-            <small>
-              ${error.message}
-            </small>
-
-          </div>
-
-        `;
-
-        return;
-
-      }
-
-
-      if (!data) {
-
-        area.innerHTML = `
-          <div class="warning">
-            Tidak ada data pinjaman.
-          </div>
-        `;
-
-        return;
-
-      }
-
-
-      if (!Array.isArray(data)) {
-
-        if (data.success === false) {
-
-          area.innerHTML = `
-            <div class="error">
-              ❌ ${data.message || "Gagal mengambil pinjaman"}
-            </div>
-          `;
-
-          return;
-
-        }
-
-        data = [];
-
-      }
-
-
-      if (data.length === 0) {
-
-        area.innerHTML = `
-
-          <div class="warning">
-
-            Tidak ada buku yang sedang dipinjam.
-
-          </div>
-
-        `;
-
-        return;
-
-      }
-
-
-      let html = "";
-
-
-      data.forEach(function(item) {
-
-        html += `
-
-          <div class="hasil-card">
-
-            <b>${item.judul_buku || "-"}</b>
-
-            <br>
-
-            ID Buku:
-            ${item.id_buku || "-"}
-
-            <br>
-
-            Pinjam:
-            ${item.tanggal_pinjam || "-"}
-
-            <br>
-
-            Batas:
-            ${item.batas_kembali || "-"}
-
-            <br><br>
-
-            <button
-              onclick="prosesKembalikan('${item.id_transaksi}')">
-
-              KEMBALIKAN BUKU
-
-            </button>
-
-          </div>
-
-        `;
-
-      });
-
-
-      area.innerHTML = html;
-
-    }
-
-  );
-
-}
-
-
-/*************************************************
- * PROSES KEMBALIKAN
- *************************************************/
-
-async function prosesKembalikan(idTransaksi) {
-
-  const konfirmasi =
-    confirm(
-      "Yakin buku akan dikembalikan?"
-    );
-
-
-  if (!konfirmasi) {
-    return;
-  }
-
-
-  try {
-
-    const response =
-      await fetch(
-
-        API_URL,
-
-        {
-          method: "POST",
-
-          body:
-            JSON.stringify({
-
-              action:
-                "kembalikan_buku",
-
-              idTransaksi:
-                idTransaksi
-
-            })
-
-        }
-
-      );
-
-
-    const data =
-      await response.json();
-
-
-    if (data.success) {
-
-      alert(
-
-        (data.message || "Buku berhasil dikembalikan") +
-
-        "\nTerlambat: " +
-
-        (data.terlambat_hari || 0) +
-
-        " hari"
-
-      );
-
-
-      const area =
-        document.getElementById(
-          "dataPengembalian"
-        );
-
-
-      if (area) {
-
-        area.innerHTML =
-          "✓ Buku berhasil dikembalikan.";
-
-      }
-
-
-      loadStatistik();
-
-    }
-
-    else {
-
-      alert(
-        data.message ||
-        "Gagal mengembalikan buku"
-      );
-
-    }
-
-  }
-
-  catch(error) {
-
-    console.error(
-      "ERROR KEMBALIKAN:",
-      error
-    );
-
-
-    alert(
-      "Gagal mengembalikan buku.\n\n" +
-      error.message
-    );
-
-  }
-
-}
-
-
-/*************************************************
- * SCAN QR BUKU YANG DIPINJAM
- *************************************************/
-
-function mulaiScanPinjaman() {
-
-  stopScanner();
-
-
-  const reader =
-    document.getElementById(
-      "readerPinjaman"
-    );
-
-
-  if (!reader) {
-
-    alert(
-      "Area scanner tidak ditemukan."
-    );
-
-    return;
-
-  }
-
-
-  reader.innerHTML = "";
-
-
-  if (typeof Html5Qrcode === "undefined") {
-
-    alert(
-      "Library scanner belum dimuat."
-    );
-
-    return;
-
-  }
-
-
-  const scanner =
-    new Html5Qrcode(
-      "readerPinjaman"
-    );
-
-  scannerAktif = scanner;
-
-
-  scanner.start(
-
-    {
-      facingMode: "environment"
-    },
-
-    {
-      fps: 10,
-
-      qrbox: {
-        width: 250,
-        height: 250
-      }
-    },
-
-
-    function(decodedText) {
-
-      const idSiswa =
-        String(decodedText || "").trim();
-
-
-      if (!idSiswa) {
-        return;
-      }
-
-
-      stopScanner();
-
-
-      const input =
-        document.getElementById(
-          "inputCariSiswa"
-        );
-
-
-      if (input) {
-        input.value = idSiswa;
-      }
-
-
-      tampilkanHasilPinjaman(idSiswa);
-
-    },
-
-
-    function(errorMessage) {
-
-      // Abaikan QR belum ditemukan
-
-    }
-
-  )
-
-  .catch(function(error) {
-
-    console.error(
-      "SCANNER PINJAMAN:",
-      error
-    );
-
-
-    scannerAktif = null;
-
-
-    alert(
-      "Kamera tidak dapat dibuka.\n\n" +
-      error
-    );
-
-  });
-
-}
-
-
-/*************************************************
- * CARI PINJAMAN MANUAL
- *************************************************/
-
-function cariPinjamanManual() {
-
-  const input =
-    document.getElementById(
-      "inputCariSiswa"
-    );
-
-
-  if (!input) {
-
-    alert(
-      "Kolom ID siswa tidak ditemukan."
-    );
-
-    return;
-
-  }
-
-
-  const id =
-    input.value.trim();
-
-
-  if (!id) {
-
-    alert(
-      "Masukkan ID siswa"
-    );
-
-    return;
-
-  }
-
-
-  tampilkanHasilPinjaman(id);
-
-}
-
-
-/*************************************************
- * TAMPILKAN HASIL PINJAMAN
- *************************************************/
-
-function tampilkanHasilPinjaman(idSiswa) {
-
-  const area =
-    document.getElementById(
-      "hasilPinjaman"
-    );
-
-
-  if (!area) {
-    return;
-  }
-
-
-  idSiswa =
-    String(idSiswa || "").trim();
-
-
-  area.innerHTML =
-    "🔍 Memuat data...";
-
-
-  panggilJSONP(
-
-    "lihat_pinjaman",
-
-    {
-      idSiswa: idSiswa
-    },
-
-    function(error, data) {
-
-      console.log(
-        "HASIL PINJAMAN:",
-        error,
-        data
-      );
-
-
-      if (error) {
-
-        area.innerHTML = `
-
-          <div class="error">
-
-            ❌ Gagal mengambil data pinjaman
-
-            <br><br>
-
-            <small>
-              ${error.message}
-            </small>
-
-          </div>
-
-        `;
-
-        return;
-
-      }
-
-
-      if (!Array.isArray(data)) {
-
-        if (data && data.success === false) {
-
-          area.innerHTML = `
-            <div class="error">
-              ❌ ${data.message || "Gagal mengambil data"}
-            </div>
-          `;
-
-          return;
-
-        }
-
-        data = [];
-
-      }
-
-
-      if (data.length === 0) {
-
-        area.innerHTML = `
-
-          <div class="warning">
-
-            Tidak ada buku yang sedang dipinjam.
-
-          </div>
-
-        `;
-
-        return;
-
-      }
-
-
-      let html = "";
-
-
-      data.forEach(function(item) {
-
-        html += `
-
-          <div class="hasil-card">
-
-            <b>📖 ${item.judul_buku || "-"}</b>
-
-            <br><br>
-
-            ID Buku:
-            ${item.id_buku || "-"}
-
-            <br>
-
-            Tanggal Pinjam:
-            ${item.tanggal_pinjam || "-"}
-
-            <br>
-
-            Batas Kembali:
-            ${item.batas_kembali || "-"}
-
-          </div>
-
-        `;
-
-      });
-
-
-      area.innerHTML =
-        html;
-
-    }
-
-  );
-
-}
-
-
-/*************************************************
- * LOAD KETERLAMBATAN
- *************************************************/
-
-function loadKeterlambatan() {
-
-  const area =
-    document.getElementById(
-      "hasilTerlambat"
-    );
-
-
-  if (!area) {
-    return;
-  }
-
-
-  area.innerHTML =
-    "🔍 Memuat data...";
-
-
-  panggilJSONP(
-
-    "keterlambatan",
-
-    {},
-
-    function(error, data) {
-
-      console.log(
-        "KETERLAMBATAN:",
-        error,
-        data
-      );
-
-
-      if (error) {
-
-        area.innerHTML = `
-
-          <div class="error">
-
-            ❌ Gagal mengambil data keterlambatan
-
-            <br><br>
-
-            <small>
-              ${error.message}
-            </small>
-
-          </div>
-
-        `;
-
-        return;
-
-      }
-
-
-      if (!Array.isArray(data)) {
-
-        if (data && data.success === false) {
-
-          area.innerHTML = `
-            <div class="error">
-              ❌ ${data.message || "Gagal mengambil data"}
-            </div>
-          `;
-
-          return;
-
-        }
-
-        data = [];
-
-      }
-
-
-      if (data.length === 0) {
-
-        area.innerHTML = `
-
-          <div class="hasil-card">
-
-            Tidak ada keterlambatan.
-
-          </div>
-
-        `;
-
-        return;
-
-      }
-
-
-      let html = "";
-
-
-      data.forEach(function(item) {
-
-        html += `
-
-          <div class="hasil-card">
-
-            <b>⚠️ ${item.nama_siswa || "-"}</b>
-
-            <br>
-
-            Kelas:
-            ${item.kelas || "-"}
-
-            <br>
-
-            Buku:
-            ${item.judul_buku || "-"}
-
-            <br>
-
-            Terlambat:
-
-            <span class="warning">
-
-              ${item.terlambat_hari || 0} hari
-
-            </span>
-
-          </div>
-
-        `;
-
-      });
-
-
-      area.innerHTML =
-        html;
-
-    }
-
-  );
-
-}
-
-
-/*************************************************
- * STATISTIK PERPUSTAKAAN
- *************************************************/
-
-function loadStatistik() {
-
-  const area =
-    document.getElementById(
-      "statistik"
-    );
-
-
-  if (!area) {
-    return;
-  }
-
-
-  area.innerHTML = `
-
-    <div class="statistik-title">
-
-      📊 STATUS PERPUSTAKAAN
-
-    </div>
-
-    <div style="
-      padding:15px;
-      text-align:center;
-    ">
-
-      Memuat statistik...
-
-    </div>
-
-  `;
-
-
-  panggilJSONP(
-
-    "statistik",
-
-    {},
-
-    function(error, data) {
-
-      console.log(
-        "DATA STATISTIK:",
-        error,
-        data
-      );
-
-
-      if (error) {
-
-        area.innerHTML = `
-
-          <div class="statistik-title">
-
-            📊 STATUS PERPUSTAKAAN
-
-          </div>
-
-          <div style="
-            padding:15px;
-            color:#dc2626;
-            text-align:center;
-          ">
-
-            ❌ Gagal memuat statistik
-
-            <br>
-
-            <small>
-              ${error.message}
-            </small>
-
-          </div>
-
-        `;
-
-        return;
-
-      }
-
-
-      if (!data) {
-
-        area.innerHTML = `
-
-          <div class="statistik-title">
-
-            📊 STATUS PERPUSTAKAAN
-
-          </div>
-
-          <div style="
-            padding:15px;
-            color:#dc2626;
-            text-align:center;
-          ">
-
-            ❌ Data statistik kosong
-
-          </div>
-
-        `;
-
-        return;
-
-      }
-
-
-      if (data.success === false) {
-
-        area.innerHTML = `
-
-          <div class="statistik-title">
-
-            📊 STATUS PERPUSTAKAAN
-
-          </div>
-
-          <div style="
-            padding:15px;
-            color:#dc2626;
-            text-align:center;
-          ">
-
-            ❌ Gagal memuat statistik
-
-            <br>
-
-            <small>
-              ${
-                data.message ||
-                "API statistik gagal"
-              }
-            </small>
-
-          </div>
-
-        `;
-
-        return;
-
-      }
-
-
-      const dipinjam =
-        Number(data.dipinjam) || 0;
-
-
-      const dikembalikan =
-        Number(data.dikembalikan) || 0;
-
-
-      const terlambat =
-        Number(data.terlambat) || 0;
-
-
-      area.innerHTML = `
-
-        <div class="statistik-title">
-
-          📊 STATUS PERPUSTAKAAN
-
-        </div>
-
-
-        <div class="statistik-grid">
-
-
-          <div class="statistik-card">
-
-            <div class="statistik-icon">
-              📕
-            </div>
-
-            <div class="statistik-info">
-
-              <div class="statistik-label">
-                Sedang Dipinjam
-              </div>
-
-              <div class="statistik-number">
-                ${dipinjam}
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <div class="statistik-card">
-
-            <div class="statistik-icon">
-              ✅
-            </div>
-
-            <div class="statistik-info">
-
-              <div class="statistik-label">
-                Dikembalikan
-              </div>
-
-              <div class="statistik-number">
-                ${dikembalikan}
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <div class="statistik-card">
-
-            <div class="statistik-icon">
-              ⚠️
-            </div>
-
-            <div class="statistik-info">
-
-              <div class="statistik-label">
-                Terlambat
-              </div>
-
-              <div class="statistik-number">
-                ${terlambat}
-              </div>
-
-            </div>
-
-          </div>
-
-
-        </div>
-
-      `;
-
-    }
-
-  );
-
-}
-
-
-/*************************************************
+/************************************************************
  * SAAT HALAMAN DIBUKA
- *************************************************/
+ ************************************************************/
 
 document.addEventListener(
   "DOMContentLoaded",
@@ -2062,3 +21,1740 @@ document.addEventListener(
 
   }
 );
+
+
+/************************************************************
+ * MENU
+ ************************************************************/
+
+function bukaMenu(namaMenu) {
+
+  document
+    .querySelectorAll(".halaman")
+    .forEach(function(el) {
+
+      el.classList.add("hidden");
+
+    });
+
+
+  const halaman =
+    document.getElementById(namaMenu);
+
+
+  if (halaman) {
+
+    halaman.classList.remove("hidden");
+
+  }
+
+
+  stopScanner();
+
+
+  if (
+    namaMenu === "keterlambatan"
+  ) {
+
+    loadKeterlambatan();
+
+  }
+
+}
+
+
+function kembaliMenu() {
+
+  stopScanner();
+
+
+  document
+    .querySelectorAll(".halaman")
+    .forEach(function(el) {
+
+      el.classList.add("hidden");
+
+    });
+
+
+  const utama =
+    document.getElementById("menuUtama");
+
+
+  if (utama) {
+
+    utama.classList.remove("hidden");
+
+  }
+
+
+  // Refresh statistik
+  loadStatistik();
+
+}
+
+
+/************************************************************
+ * STOP SCANNER
+ ************************************************************/
+
+function stopScanner() {
+
+  if (scannerAktif) {
+
+    try {
+
+      scannerAktif
+        .stop()
+        .then(function() {
+
+          try {
+            scannerAktif.clear();
+          } catch (e) {}
+
+        })
+        .catch(function() {});
+
+    } catch (e) {}
+
+    scannerAktif = null;
+
+  }
+
+
+  const readerIds = [
+
+    "readerSiswaPinjam",
+    "readerBukuPinjam",
+    "readerKembali",
+    "readerPinjaman"
+
+  ];
+
+
+  readerIds.forEach(function(id) {
+
+    const el =
+      document.getElementById(id);
+
+
+    if (el) {
+
+      el.style.display = "none";
+      el.innerHTML = "";
+
+    }
+
+  });
+
+}
+
+
+/************************************************************
+ * GENERIC START SCANNER
+ ************************************************************/
+
+function jalankanScanner(
+  readerId,
+  successCallback
+) {
+
+  stopScanner();
+
+
+  const reader =
+    document.getElementById(readerId);
+
+
+  if (!reader) {
+
+    alert(
+      "Area kamera tidak ditemukan"
+    );
+
+    return;
+
+  }
+
+
+  reader.style.display = "block";
+
+
+  scannerAktif =
+    new Html5Qrcode(readerId);
+
+
+  scannerAktif
+    .start(
+
+      {
+        facingMode: "environment"
+      },
+
+      {
+        fps: 10,
+
+        qrbox: {
+          width: 250,
+          height: 250
+        }
+
+      },
+
+      function(decodedText) {
+
+        const hasil =
+          String(decodedText || "")
+            .trim();
+
+
+        if (!hasil) {
+          return;
+        }
+
+
+        stopScanner();
+
+
+        successCallback(hasil);
+
+      },
+
+      function(errorMessage) {
+
+        // Abaikan error pembacaan frame
+        // karena kamera sedang mencari QR
+
+      }
+
+    )
+    .catch(function(error) {
+
+      console.error(
+        "Scanner error:",
+        error
+      );
+
+
+      alert(
+        "❌ Kamera tidak dapat dibuka.\n\n" +
+        "Pastikan browser diberi izin kamera."
+      );
+
+
+      stopScanner();
+
+    });
+
+}
+
+
+/************************************************************
+ * SCAN SISWA - PINJAM
+ ************************************************************/
+
+function mulaiScanSiswaPinjam() {
+
+  jalankanScanner(
+    "readerSiswaPinjam",
+
+    function(idSiswa) {
+
+      document
+        .getElementById(
+          "inputSiswaPinjam"
+        )
+        .value = idSiswa;
+
+
+      cariSiswaPinjamManual();
+
+    }
+  );
+
+}
+
+
+/************************************************************
+ * CARI SISWA - PINJAM
+ ************************************************************/
+
+function cariSiswaPinjamManual() {
+
+  const input =
+    document.getElementById(
+      "inputSiswaPinjam"
+    );
+
+
+  const id =
+    input.value.trim();
+
+
+  if (!id) {
+
+    alert(
+      "Masukkan atau scan ID siswa"
+    );
+
+    return;
+
+  }
+
+
+  cariSiswaAPI(
+    id,
+    "hasilSiswaPinjam"
+  );
+
+}
+
+
+/************************************************************
+ * SCAN BUKU - PINJAM
+ ************************************************************/
+
+function mulaiScanBukuPinjam() {
+
+  jalankanScanner(
+    "readerBukuPinjam",
+
+    function(idBuku) {
+
+      document
+        .getElementById(
+          "inputBukuPinjam"
+        )
+        .value = idBuku;
+
+
+      cariBukuPinjamManual();
+
+    }
+  );
+
+}
+
+
+/************************************************************
+ * CARI BUKU - PINJAM
+ ************************************************************/
+
+function cariBukuPinjamManual() {
+
+  const input =
+    document.getElementById(
+      "inputBukuPinjam"
+    );
+
+
+  const id =
+    input.value.trim();
+
+
+  if (!id) {
+
+    alert(
+      "Masukkan atau scan ID buku"
+    );
+
+    return;
+
+  }
+
+
+  cariBukuAPI(
+    id,
+    "hasilBukuPinjam"
+  );
+
+}
+
+
+/************************************************************
+ * CARI SISWA API - JSONP
+ ************************************************************/
+
+function cariSiswaAPI(
+  idSiswa,
+  targetId
+) {
+
+  const target =
+    document.getElementById(targetId);
+
+
+  if (target) {
+
+    target.innerHTML =
+      "<p>⏳ Mencari siswa...</p>";
+
+  }
+
+
+  const callback =
+    "siswaCallback_" +
+    Date.now();
+
+
+  window[callback] =
+    function(data) {
+
+      try {
+
+        if (
+          !data ||
+          data.success === false
+        ) {
+
+          throw new Error(
+            data &&
+            data.message
+              ? data.message
+              : "Gagal mengambil data"
+          );
+
+        }
+
+
+        if (!data.found) {
+
+          target.innerHTML =
+            `<div class="error-box">
+              ❌ Siswa tidak ditemukan
+            </div>`;
+
+          return;
+
+        }
+
+
+        target.innerHTML = `
+
+          <div class="success-box">
+
+            <b>✅ Siswa ditemukan</b>
+
+            <p>
+              <b>ID:</b>
+              ${escapeHtml(data.id_siswa)}
+            </p>
+
+            <p>
+              <b>Nama:</b>
+              ${escapeHtml(data.nama_siswa)}
+            </p>
+
+            <p>
+              <b>Kelas:</b>
+              ${escapeHtml(data.kelas)}
+            </p>
+
+            <p>
+              <b>Status:</b>
+              ${escapeHtml(data.status)}
+            </p>
+
+          </div>
+
+        `;
+
+      } catch (error) {
+
+        target.innerHTML =
+          `<div class="error-box">
+            ❌ ${escapeHtml(error.message)}
+          </div>`;
+
+      } finally {
+
+        hapusJSONPScript(callback);
+
+      }
+
+    };
+
+
+  buatJSONPScript(
+    API_URL +
+    "?action=cari_siswa" +
+    "&idSiswa=" +
+    encodeURIComponent(idSiswa) +
+    "&callback=" +
+    callback
+  );
+
+}
+
+
+/************************************************************
+ * CARI BUKU API - JSONP
+ ************************************************************/
+
+function cariBukuAPI(
+  idBuku,
+  targetId
+) {
+
+  const target =
+    document.getElementById(targetId);
+
+
+  if (target) {
+
+    target.innerHTML =
+      "<p>⏳ Mencari buku...</p>";
+
+  }
+
+
+  const callback =
+    "bukuCallback_" +
+    Date.now();
+
+
+  window[callback] =
+    function(data) {
+
+      try {
+
+        if (
+          !data ||
+          data.success === false
+        ) {
+
+          throw new Error(
+            data &&
+            data.message
+              ? data.message
+              : "Gagal mengambil data"
+          );
+
+        }
+
+
+        if (!data.found) {
+
+          target.innerHTML =
+            `<div class="error-box">
+              ❌ Buku tidak ditemukan
+            </div>`;
+
+          return;
+
+        }
+
+
+        const stok =
+          Number(data.stok || 0);
+
+
+        target.innerHTML = `
+
+          <div class="success-box">
+
+            <b>✅ Buku ditemukan</b>
+
+            <p>
+              <b>ID:</b>
+              ${escapeHtml(data.id_buku)}
+            </p>
+
+            <p>
+              <b>Judul:</b>
+              ${escapeHtml(data.judul_buku)}
+            </p>
+
+            <p>
+              <b>Penulis:</b>
+              ${escapeHtml(data.penulis)}
+            </p>
+
+            <p>
+              <b>Penerbit:</b>
+              ${escapeHtml(data.penerbit)}
+            </p>
+
+            <p>
+              <b>Stok:</b>
+              ${stok}
+            </p>
+
+          </div>
+
+        `;
+
+      } catch (error) {
+
+        target.innerHTML =
+          `<div class="error-box">
+            ❌ ${escapeHtml(error.message)}
+          </div>`;
+
+      } finally {
+
+        hapusJSONPScript(callback);
+
+      }
+
+    };
+
+
+  buatJSONPScript(
+    API_URL +
+    "?action=cari_buku" +
+    "&idBuku=" +
+    encodeURIComponent(idBuku) +
+    "&callback=" +
+    callback
+  );
+
+}
+
+
+/************************************************************
+ * JSONP HELPER
+ ************************************************************/
+
+function buatJSONPScript(url) {
+
+  const script =
+    document.createElement("script");
+
+
+  const callback =
+    new URL(url)
+      .searchParams
+      .get("callback");
+
+
+  script.id = callback;
+
+  script.src =
+    url;
+
+
+  script.onerror =
+    function() {
+
+      console.error(
+        "JSONP gagal:",
+        url
+      );
+
+      hapusJSONPScript(callback);
+
+    };
+
+
+  document.body.appendChild(script);
+
+}
+
+
+function hapusJSONPScript(callback) {
+
+  delete window[callback];
+
+
+  const script =
+    document.getElementById(callback);
+
+
+  if (script) {
+
+    script.remove();
+
+  }
+
+}
+
+
+/************************************************************
+ * PROSES PINJAM
+ ************************************************************/
+
+async function prosesPinjam() {
+
+  const idSiswa =
+    document
+      .getElementById(
+        "inputSiswaPinjam"
+      )
+      .value
+      .trim();
+
+
+  const idBuku =
+    document
+      .getElementById(
+        "inputBukuPinjam"
+      )
+      .value
+      .trim();
+
+
+  if (!idSiswa) {
+
+    alert("ID siswa belum diisi");
+    return;
+
+  }
+
+
+  if (!idBuku) {
+
+    alert("ID buku belum diisi");
+    return;
+
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        API_URL,
+        {
+
+          method: "POST",
+
+          body:
+            JSON.stringify({
+
+              action:
+                "PINJAM_BUKU",
+
+              idSiswa:
+                idSiswa,
+
+              idBuku:
+                idBuku
+
+            })
+
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!data.success) {
+
+      alert(
+        "❌ " +
+        (data.message ||
+          "Gagal meminjam buku")
+      );
+
+      return;
+
+    }
+
+
+    alert(
+      "✅ Buku berhasil dipinjam!"
+    );
+
+
+    document
+      .getElementById(
+        "inputSiswaPinjam"
+      )
+      .value = "";
+
+
+    document
+      .getElementById(
+        "inputBukuPinjam"
+      )
+      .value = "";
+
+
+    document
+      .getElementById(
+        "hasilSiswaPinjam"
+      )
+      .innerHTML = "";
+
+
+    document
+      .getElementById(
+        "hasilBukuPinjam"
+      )
+      .innerHTML = "";
+
+
+    loadStatistik();
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert(
+      "❌ Gagal terhubung ke server"
+    );
+
+  }
+
+}
+
+
+/************************************************************
+ * SCAN PENGEMBALIAN
+ ************************************************************/
+
+function mulaiScanPengembalian() {
+
+  jalankanScanner(
+    "readerKembali",
+
+    function(idSiswa) {
+
+      document
+        .getElementById(
+          "inputCariPengembalian"
+        )
+        .value = idSiswa;
+
+
+      tampilkanPinjamanSiswa(
+        idSiswa
+      );
+
+    }
+  );
+
+}
+
+
+/************************************************************
+ * CARI PENGEMBALIAN MANUAL
+ ************************************************************/
+
+function cariPengembalianManual() {
+
+  const idSiswa =
+    document
+      .getElementById(
+        "inputCariPengembalian"
+      )
+      .value
+      .trim();
+
+
+  if (!idSiswa) {
+
+    alert(
+      "Masukkan atau scan ID siswa"
+    );
+
+    return;
+
+  }
+
+
+  tampilkanPinjamanSiswa(
+    idSiswa
+  );
+
+}
+
+
+/************************************************************
+ * TAMPILKAN PINJAMAN SISWA
+ * JSONP - BUKAN FETCH GET
+ ************************************************************/
+
+function tampilkanPinjamanSiswa(
+  idSiswa
+) {
+
+  const target =
+    document.getElementById(
+      "dataPengembalian"
+    );
+
+
+  target.innerHTML =
+    "<p>⏳ Mengambil data pinjaman...</p>";
+
+
+  const callback =
+    "pengembalianCallback_" +
+    Date.now();
+
+
+  window[callback] =
+    function(data) {
+
+      try {
+
+        if (
+          !data ||
+          data.success === false
+        ) {
+
+          throw new Error(
+            data &&
+            data.message
+              ? data.message
+              : "Gagal mengambil data"
+          );
+
+        }
+
+
+        if (
+          !data.data ||
+          data.data.length === 0
+        ) {
+
+          target.innerHTML = `
+
+            <div class="error-box">
+
+              ℹ️ Siswa tidak memiliki
+              buku yang sedang dipinjam.
+
+            </div>
+
+          `;
+
+          return;
+
+        }
+
+
+        let html = "";
+
+
+        data.data.forEach(
+          function(item) {
+
+            html += `
+
+              <div class="card">
+
+                <h3>
+                  📖
+                  ${escapeHtml(
+                    item.judul_buku
+                  )}
+                </h3>
+
+                <p>
+                  <b>ID Buku:</b>
+                  ${escapeHtml(
+                    item.id_buku
+                  )}
+                </p>
+
+                <p>
+                  <b>Tanggal Pinjam:</b>
+                  ${escapeHtml(
+                    item.tanggal_pinjam
+                  )}
+                </p>
+
+                <p>
+                  <b>Batas Kembali:</b>
+                  ${escapeHtml(
+                    item.batas_kembali
+                  )}
+                </p>
+
+                <button
+                  class="btn-proses"
+                  onclick="prosesKembalikan('${escapeJs(item.id_transaksi)}')"
+                >
+                  ↩️ KEMBALIKAN BUKU
+                </button>
+
+              </div>
+
+            `;
+
+          }
+        );
+
+
+        target.innerHTML =
+          html;
+
+      } catch (error) {
+
+        target.innerHTML =
+          `<div class="error-box">
+            ❌ ${escapeHtml(error.message)}
+          </div>`;
+
+      } finally {
+
+        hapusJSONPScript(callback);
+
+      }
+
+    };
+
+
+  buatJSONPScript(
+
+    API_URL +
+    "?action=lihat_pinjaman" +
+    "&idSiswa=" +
+    encodeURIComponent(idSiswa) +
+    "&callback=" +
+    callback
+
+  );
+
+}
+
+
+/************************************************************
+ * PROSES PENGEMBALIAN
+ ************************************************************/
+
+async function prosesKembalikan(
+  idTransaksi
+) {
+
+  if (
+    !confirm(
+      "Apakah buku ini akan dikembalikan?"
+    )
+  ) {
+
+    return;
+
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        API_URL,
+        {
+
+          method: "POST",
+
+          body:
+            JSON.stringify({
+
+              action:
+                "KEMBALIKAN_BUKU",
+
+              idTransaksi:
+                idTransaksi
+
+            })
+
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!data.success) {
+
+      alert(
+        "❌ " +
+        (
+          data.message ||
+          "Gagal mengembalikan buku"
+        )
+      );
+
+      return;
+
+    }
+
+
+    alert(
+      "✅ Buku berhasil dikembalikan!"
+    );
+
+
+    const idSiswa =
+      document
+        .getElementById(
+          "inputCariPengembalian"
+        )
+        .value
+        .trim();
+
+
+    if (idSiswa) {
+
+      tampilkanPinjamanSiswa(
+        idSiswa
+      );
+
+    }
+
+
+    loadStatistik();
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert(
+      "❌ Gagal terhubung ke server"
+    );
+
+  }
+
+}
+
+
+/************************************************************
+ * SCAN BUKU DIPINJAM
+ ************************************************************/
+
+function mulaiScanPinjaman() {
+
+  jalankanScanner(
+    "readerPinjaman",
+
+    function(idSiswa) {
+
+      document
+        .getElementById(
+          "inputCariSiswa"
+        )
+        .value = idSiswa;
+
+
+      tampilkanHasilPinjaman(
+        idSiswa
+      );
+
+    }
+  );
+
+}
+
+
+/************************************************************
+ * CARI BUKU DIPINJAM MANUAL
+ ************************************************************/
+
+function cariPinjamanManual() {
+
+  const idSiswa =
+    document
+      .getElementById(
+        "inputCariSiswa"
+      )
+      .value
+      .trim();
+
+
+  if (!idSiswa) {
+
+    alert(
+      "Masukkan atau scan ID siswa"
+    );
+
+    return;
+
+  }
+
+
+  tampilkanHasilPinjaman(
+    idSiswa
+  );
+
+}
+
+
+/************************************************************
+ * TAMPILKAN BUKU YANG DIPINJAM
+ ************************************************************/
+
+function tampilkanHasilPinjaman(
+  idSiswa
+) {
+
+  const target =
+    document.getElementById(
+      "hasilPinjaman"
+    );
+
+
+  target.innerHTML =
+    "<p>⏳ Mengambil data...</p>";
+
+
+  const callback =
+    "pinjamanCallback_" +
+    Date.now();
+
+
+  window[callback] =
+    function(data) {
+
+      try {
+
+        if (
+          !data ||
+          data.success === false
+        ) {
+
+          throw new Error(
+            data &&
+            data.message
+              ? data.message
+              : "Gagal mengambil data"
+          );
+
+        }
+
+
+        if (
+          !data.data ||
+          data.data.length === 0
+        ) {
+
+          target.innerHTML = `
+
+            <div class="error-box">
+
+              ℹ️ Tidak ada buku
+              yang sedang dipinjam.
+
+            </div>
+
+          `;
+
+          return;
+
+        }
+
+
+        let html = "";
+
+
+        data.data.forEach(
+          function(item) {
+
+            html += `
+
+              <div class="card">
+
+                <h3>
+                  📖
+                  ${escapeHtml(
+                    item.judul_buku
+                  )}
+                </h3>
+
+                <p>
+                  <b>ID Buku:</b>
+                  ${escapeHtml(
+                    item.id_buku
+                  )}
+                </p>
+
+                <p>
+                  <b>Tanggal Pinjam:</b>
+                  ${escapeHtml(
+                    item.tanggal_pinjam
+                  )}
+                </p>
+
+                <p>
+                  <b>Batas Kembali:</b>
+                  ${escapeHtml(
+                    item.batas_kembali
+                  )}
+                </p>
+
+                <p>
+                  <b>Status:</b>
+                  ${escapeHtml(
+                    item.status
+                  )}
+                </p>
+
+              </div>
+
+            `;
+
+          }
+        );
+
+
+        target.innerHTML =
+          html;
+
+      } catch (error) {
+
+        target.innerHTML =
+          `<div class="error-box">
+            ❌ ${escapeHtml(error.message)}
+          </div>`;
+
+      } finally {
+
+        hapusJSONPScript(callback);
+
+      }
+
+    };
+
+
+  buatJSONPScript(
+
+    API_URL +
+    "?action=lihat_pinjaman" +
+    "&idSiswa=" +
+    encodeURIComponent(idSiswa) +
+    "&callback=" +
+    callback
+
+  );
+
+}
+
+
+/************************************************************
+ * STATISTIK
+ ************************************************************/
+
+function loadStatistik() {
+
+  const loading =
+    document.getElementById(
+      "statistikLoading"
+    );
+
+
+  const errorBox =
+    document.getElementById(
+      "statistikError"
+    );
+
+
+  const dataBox =
+    document.getElementById(
+      "statistikData"
+    );
+
+
+  const dipinjam =
+    document.getElementById(
+      "statDipinjam"
+    );
+
+
+  const dikembalikan =
+    document.getElementById(
+      "statDikembalikan"
+    );
+
+
+  const terlambat =
+    document.getElementById(
+      "statTerlambat"
+    );
+
+
+  if (
+    !loading ||
+    !errorBox ||
+    !dataBox
+  ) {
+
+    return;
+
+  }
+
+
+  loading.style.display =
+    "block";
+
+
+  errorBox.style.display =
+    "none";
+
+
+  dataBox.style.display =
+    "none";
+
+
+  const callback =
+    "statistikCallback_" +
+    Date.now();
+
+
+  let selesai =
+    false;
+
+
+  const timeout =
+    setTimeout(
+      function() {
+
+        if (selesai) {
+          return;
+        }
+
+
+        selesai = true;
+
+
+        loading.style.display =
+          "none";
+
+
+        errorBox.style.display =
+          "block";
+
+
+        hapusJSONPScript(
+          callback
+        );
+
+      },
+      10000
+    );
+
+
+  window[callback] =
+    function(data) {
+
+      if (selesai) {
+        return;
+      }
+
+
+      selesai = true;
+
+
+      clearTimeout(timeout);
+
+
+      try {
+
+        console.log(
+          "STATISTIK:",
+          data
+        );
+
+
+        if (
+          !data ||
+          data.success === false
+        ) {
+
+          throw new Error(
+            data &&
+            data.message
+              ? data.message
+              : "Gagal mengambil statistik"
+          );
+
+        }
+
+
+        dipinjam.innerHTML =
+          Number(
+            data.dipinjam || 0
+          );
+
+
+        dikembalikan.innerHTML =
+          Number(
+            data.dikembalikan || 0
+          );
+
+
+        terlambat.innerHTML =
+          Number(
+            data.terlambat || 0
+          );
+
+
+        loading.style.display =
+          "none";
+
+
+        errorBox.style.display =
+          "none";
+
+
+        dataBox.style.display =
+          "grid";
+
+
+      } catch (error) {
+
+        console.error(
+          "Statistik error:",
+          error
+        );
+
+
+        loading.style.display =
+          "none";
+
+
+        errorBox.style.display =
+          "block";
+
+
+        dataBox.style.display =
+          "none";
+
+      } finally {
+
+        hapusJSONPScript(
+          callback
+        );
+
+      }
+
+    };
+
+
+  buatJSONPScript(
+
+    API_URL +
+    "?action=statistik" +
+    "&callback=" +
+    callback +
+    "&t=" +
+    Date.now()
+
+  );
+
+}
+
+
+/************************************************************
+ * KETERLAMBATAN
+ ************************************************************/
+
+function loadKeterlambatan() {
+
+  const target =
+    document.getElementById(
+      "dataKeterlambatan"
+    );
+
+
+  if (!target) {
+    return;
+  }
+
+
+  target.innerHTML =
+    "<p>⏳ Memuat data...</p>";
+
+
+  const callback =
+    "terlambatCallback_" +
+    Date.now();
+
+
+  window[callback] =
+    function(data) {
+
+      try {
+
+        if (
+          !data ||
+          data.success === false
+        ) {
+
+          throw new Error(
+            data &&
+            data.message
+              ? data.message
+              : "Gagal mengambil data"
+          );
+
+        }
+
+
+        if (
+          !data.data ||
+          data.data.length === 0
+        ) {
+
+          target.innerHTML = `
+
+            <div class="success-box">
+
+              ✅ Tidak ada keterlambatan.
+
+            </div>
+
+          `;
+
+          return;
+
+        }
+
+
+        let html = "";
+
+
+        data.data.forEach(
+          function(item) {
+
+            html += `
+
+              <div class="card">
+
+                <h3>
+                  ⚠️
+                  ${escapeHtml(
+                    item.nama_siswa
+                  )}
+                </h3>
+
+                <p>
+                  <b>Kelas:</b>
+                  ${escapeHtml(
+                    item.kelas
+                  )}
+                </p>
+
+                <p>
+                  <b>Buku:</b>
+                  ${escapeHtml(
+                    item.judul_buku
+                  )}
+                </p>
+
+                <p>
+                  <b>Batas Kembali:</b>
+                  ${escapeHtml(
+                    item.batas_kembali
+                  )}
+                </p>
+
+                <p>
+                  <b>Terlambat:</b>
+                  ${item.hari_terlambat}
+                  hari
+                </p>
+
+              </div>
+
+            `;
+
+          }
+        );
+
+
+        target.innerHTML =
+          html;
+
+      } catch (error) {
+
+        target.innerHTML =
+          `<div class="error-box">
+            ❌ ${escapeHtml(error.message)}
+          </div>`;
+
+      } finally {
+
+        hapusJSONPScript(
+          callback
+        );
+
+      }
+
+    };
+
+
+  buatJSONPScript(
+
+    API_URL +
+    "?action=keterlambatan" +
+    "&callback=" +
+    callback
+
+  );
+
+}
+
+
+/************************************************************
+ * ESCAPE HTML
+ ************************************************************/
+
+function escapeHtml(text) {
+
+  return String(
+    text == null
+      ? ""
+      : text
+  )
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+    .replace(
+      /</g,
+      "&lt;"
+    )
+    .replace(
+      />/g,
+      "&gt;"
+    )
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+    .replace(
+      /'/g,
+      "&#039;"
+    );
+
+}
+
+
+/************************************************************
+ * ESCAPE JAVASCRIPT
+ ************************************************************/
+
+function escapeJs(text) {
+
+  return String(
+    text == null
+      ? ""
+      : text
+  )
+    .replace(
+      /\\/g,
+      "\\\\"
+    )
+    .replace(
+      /'/g,
+      "\\'"
+    )
+    .replace(
+      /"/g,
+      '\\"'
+    )
+    .replace(
+      /\n/g,
+      "\\n"
+    )
+    .replace(
+      /\r/g,
+      "\\r"
+    );
+
+}
